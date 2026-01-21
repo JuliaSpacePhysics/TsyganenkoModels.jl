@@ -1,0 +1,5 @@
+[deps]
+certifi = ""
+
+[pip.deps]
+geopack = { version = "@git+https://github.com/tsssss/geopack", editable = true }

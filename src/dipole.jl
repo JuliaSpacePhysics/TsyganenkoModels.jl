@@ -1,3 +1,16 @@
+"""
+    dipole_tilt(time) -> ψ
+
+Compute the dipole tilt angle ψ (radians): ψ = asin(ẑ_dipole · x̂_sun).
+"""
+function dipole_tilt(t)
+    _, ra, dec, _, _ = GeoCotrans.csundir(t)
+    sun_gei = GeoCotrans.calc_sun_gei(ra, dec)
+    dipole_gei = GeoCotrans.calc_dipole_gei(t)
+    sps = clamp(dot(dipole_gei, sun_gei), -1.0, 1.0)
+    return asin(sps)
+end
+
 function dipdistr(x, y, z, mode)
     x2 = x^2
     rho2 = x2 + y^2

@@ -19,5 +19,5 @@ makedocs(;
 
 deploydocs(;
     repo="github.com/JuliaSpacePhysics/TsyganenkoModels.jl",
-    devbranch="main",
+    push_preview = true
 )

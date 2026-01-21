@@ -39,14 +39,14 @@ const PARAM = [
 ]'  # Transpose to get 30×7 matrix
 
 """
-    t89(x, y, z, ps, iopt; cache=nothing) -> (Bx, By, Bz)
+    t89(𝐫, ps, iopt; cache=nothing) -> GSM(Bx, By, Bz)
+    t89(x, y, z, ps, iopt)
+    t89(x, y, z, t::AbstractTime, iopt)
 
-Compute GSM components of the magnetic field produced by extraterrestrial current systems
-in the geomagnetosphere using the Tsyganenko 89 model.
+Compute GSM components of the magnetic field [nT] produced by extraterrestrial current systems
+in the geomagnetosphere using the Tsyganenko 89 model, given the position `𝐫` or `x`, `y`, `z` in GSM coordinates [Earth radii], the geodipole tilt angle `ps` [radians] / time `t`.
 
 # Parameters
-- `x, y, z`: Position in GSM coordinates [Earth radii]
-- `ps`: Geodipole tilt angle [radians]
 - `iopt`: Ground disturbance level index (1-7)
   - 1: Kp = 0, 0+
   - 2: Kp = 1-, 1, 1+
@@ -55,9 +55,6 @@ in the geomagnetosphere using the Tsyganenko 89 model.
   - 5: Kp = 4-, 4, 4+
   - 6: Kp = 5-, 5, 5+
   - 7: Kp ≥ 6-
-
-# Returns
-- `(Bx, By, Bz)`: Magnetic field components in GSM coordinates [nT]
 
 # Model Description
 Valid up to geocentric distances of 70 RE. Based on merged IMP-A through J (1966-1974),
@@ -75,7 +72,12 @@ function t89(x, y, z, ps, iopt; cache = nothing)
     if isnothing(cache) || cache.iopt != iopt
         cache = t89_init(iopt)
     end
-    return _t89_compute(x, y, z, ps, cache)
+    return GSM(_t89_compute(x, y, z, ps, cache))
+end
+
+function t89(x, y, z, t::AbstractTime, iopt; kw...)
+    ps = dipole_tilt(t)
+    return t89(x, y, z, ps, iopt; kw...)
 end
 
 t89(r, args...; kwargs...) = t89(r[1], r[2], r[3], args...; kwargs...)
@@ -147,7 +149,6 @@ function _t89_compute(x, y, z, ps, c)
     z2 = z * z
     TPS = SPS / CPS
     HTP = TPS * 0.5
-    GSP = c.G * SPS
     XSM = x * CPS - z * SPS
     ZSM = x * SPS + z * CPS
 
