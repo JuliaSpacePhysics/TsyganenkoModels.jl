@@ -509,10 +509,6 @@ function birk1tot_02(ps, x, y, z)
         error("birk1tot_02: invalid region")
     end
 
-    bx = 0.0
-    by = 0.0
-    bz = 0.0
-
     b_diploop1 = if loc in (1, 3, 4)
         @no_escape begin
             d = @alloc(Float64, 3, 26)
@@ -531,7 +527,7 @@ function birk1tot_02(ps, x, y, z)
 
     b_condip1 = if loc in (2, 3, 4)
         @no_escape begin
-            d2 = @alloc(3, 79)
+            d2 = @alloc(Float64, 3, 79)
             condip1!(d2, x, y, z, ps)
             _bx, _by, _bz = 0.0, 0.0, 0.0
             for i in eachindex(BIRK1_C2)
@@ -800,7 +796,7 @@ function condip1!(d, x, y, z, ps)
         bx3x, by3x, bz3x, bx3y, by3y, bz3y, bx3z, by3z, bz3z = dipxyz(xsm - xd, y - yd, zsm + zd)
         bx4x, by4x, bz4x, bx4y, by4y, bz4y, bx4z, by4z, bz4z = dipxyz(xsm - xd, y + yd, zsm + zd)
 
-        ix = i * 3 + 5
+        ix = i * 3 + 3
         iy = ix + 1
         iz = iy + 1
 
@@ -837,7 +833,7 @@ function condip1!(d, x, y, z, ps)
         zd = BIRK1_ZZ2[i + 9]
         bx1x, by1x, bz1x, bx1y, by1y, bz1y, bx1z, by1z, bz1z = dipxyz(xsm, y, zsm - zd)
         bx2x, by2x, bz2x, bx2y, by2y, bz2y, bx2z, by2z, bz2z = dipxyz(xsm, y, zsm + zd)
-        ix = 59 + i * 2
+        ix = 58 + i * 2
         iz = ix + 1
         d[1, ix] = (bx1x - bx2x) * cps + (bz1x - bz2x) * sps
         d[2, ix] = by1x - by2x
@@ -1266,7 +1262,7 @@ function r2inner(x, y, z)
     db6 = dipdistr(x - pn[7], y, z, 0)
     db7 = dipdistr(x - pn[8], y, z, 1)
 
-    return b .+ pl[6] * db6 .+ pl[7] .* db7 .+ pl[8] .* db8
+    return b .+ pl[6] .* db6 .+ pl[7] .* db7 .+ pl[8] .* db8
 end
 
 function bconic!(cbx, cby, cbz, x, y, z)

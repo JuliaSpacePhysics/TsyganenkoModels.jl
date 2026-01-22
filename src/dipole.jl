@@ -29,14 +29,14 @@ function dipdistr(x, y, z, mode)
     return bx, by, bz
 end
 
-function dipole(ps, x, y, z)
+function dipole(ps, x, y, z; q0 = 30574)
     sps, cps = sincos(ps)
 
     p = x^2
     u = z^2
     v = 3 * z * x
     t = y^2
-    q = 30574 / sqrt(p + t + u)^5
+    q = q0 / sqrt(p + t + u)^5
     bx = q * ((t + u - 2 * p) * sps - v * cps)
     by = -3 * y * q * (x * sps + z * cps)
     bz = q * ((p + t - 2 * u) * cps - v * sps)
