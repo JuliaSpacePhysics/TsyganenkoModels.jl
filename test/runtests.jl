@@ -1,3 +1,5 @@
+# Reference: https://github.com/tsssss/geopack/blob/master/geopack/test_geopack1.md
+
 using TsyganenkoModels
 using Test
 using Aqua
@@ -12,7 +14,9 @@ end
     r_gsm = (-5.1, 0.3, 2.8)
     ps = -0.533585131
     iopt = 2
-    @test t89(r_gsm, ps, iopt) == (20.77213175686351, -0.6465547428023687, -15.071641970338984)
+    B_true = [20.77213175686351, -0.6465547428023687, -15.071641970338984]
+    @test t89(r_gsm, ps, iopt) == B_true
+    @test t89(r_gsm, time, iopt) ≈ B_true rtol = 1e-4
 
     pdyn = 2.0   # Solar wind dynamic pressure [nPa]
     dst = -87.0  # Dst index [nT]
