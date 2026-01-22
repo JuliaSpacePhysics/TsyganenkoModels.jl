@@ -13,7 +13,8 @@ mutable struct T01State
 end
 const STATE = Ref(T01State(0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0))
 
-function t01_extall(a, pdyn, dst, byimf, bzimf, g1, g2, ps, x, y, z)
+function t01_extall(pdyn, dst, byimf, bzimf, g1, g2, ps, x, y, z)
+    a = T01_A
     rh2 = -5.2
     xappa = (pdyn / 2.0)^a[39]
     rh0 = a[40]

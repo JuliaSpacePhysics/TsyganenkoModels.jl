@@ -81,7 +81,7 @@ function warped(ps, x, y, z)
     dfdx = 0.0
     sf, cf = sincos(f)
     yas, zas = rho * cf, rho * sf
-    bx_as1, by_as1, bz_as1, bx_as2, by_as2, bz_as2 = unwarped(x, yas, zas)
+    bx_as1, by_as1, bz_as1, bx_as2, by_as2, bz_as2 = unwarped(x, yas, zas, STATE[].dxshift1)
     brho_as = by_as1 * cf + bz_as1 * sf; bphi_as = -by_as1 * sf + bz_as1 * cf
     brho_s = brho_as * dfdphi; bphi_s = bphi_as - rho * (bx_as1 * dfdx + brho_as * dfdrho)
     bx1, by1, bz1 = bx_as1 * dfdphi, brho_s * cphi - bphi_s * sphi, brho_s * sphi + bphi_s * cphi
@@ -91,7 +91,7 @@ function warped(ps, x, y, z)
     return bx1, by1, bz1, bx2, by2, bz2
 end
 
-function unwarped(x, y, z)
+function unwarped(x, y, z, dxshift1)
     # Mode 1 parameters
     deltadx1, alpha1, xshift1 = 1.0, 1.1, 6.0
     # Mode 2 parameters
@@ -99,13 +99,13 @@ function unwarped(x, y, z)
     xm1, xm2 = -12.0, -12.0
 
     # Mode 1
-    xsc1 = (x - xshift1 - STATE[].dxshift1) * alpha1 - xm1 * (alpha1 - 1.0)
+    xsc1 = (x - xshift1 - dxshift1) * alpha1 - xm1 * (alpha1 - 1.0)
     ysc1 = y * alpha1
     zsc1 = z * alpha1
     d0sc1 = STATE[].d * alpha1
 
     fx1, fy1, fz1 = taildisk(d0sc1, deltadx1, STATE[].deltady, xsc1, ysc1, zsc1)
-    hx1, hy1, hz1 = shlcar5x5(TAIL_A1, x, y, z, STATE[].dxshift1)
+    hx1, hy1, hz1 = shlcar5x5(TAIL_A1, x, y, z, dxshift1)
     bx1 = fx1 + hx1
     by1 = fy1 + hy1
     bz1 = fz1 + hz1
