@@ -16,7 +16,7 @@ end
     iopt = 2
     B_true = [20.77213175686351, -0.6465547428023687, -15.071641970338984]
     @test t89(r_gsm, ps, iopt) == B_true
-    @test t89(r_gsm, time, iopt) ≈ B_true rtol = 1e-4
+    @test t89(r_gsm, time, iopt) ≈ B_true rtol = 1.0e-4
 
     pdyn = 2.0   # Solar wind dynamic pressure [nPa]
     dst = -87.0  # Dst index [nT]
@@ -24,4 +24,19 @@ end
     bzimf = -5.0 # IMF Bz [nT]
     result = t96(r_gsm, ps, pdyn, dst, byimf, bzimf)
     @test collect(result) ≈ [61.17831041891597, -1.4611958991749145, -40.44973158310239]
+
+    # T01 model test (reference from Python geopack.t01)
+    result_t01 = t01(r_gsm, ps, pdyn, dst, byimf, bzimf)
+    @test collect(result_t01) ≈ [46.972663449207076, 1.5442350206329172, -31.3541847716317] rtol = 1.0e-6
+end
+
+@testset "External magnetic fields - T96" begin
+    @test TsyganenkoModels.r2inner(1, 2, 3) == (-10.166350217481673, 16.22849226559209, -4.448363653306496)
+    @test collect(TsyganenkoModels.r2sheet(1, 2, 3)) ≈ [9.453799383727832, 2.8367547754153284, 0.8914493552029839]
+
+    # Geopack.geopack.t96.birk1shld(1,2,3,4)
+    @test collect(TsyganenkoModels.birk1shld(1, 2, 3, 4)) ≈ [2.525027295079125, 0.05065465250867974, 0.12243989839075299]
+
+    # Geopack.geopack.t96.birk1tot_02(1,2,3,-0.46)
+    @test collect(TsyganenkoModels.birk1tot_02(1, 2, 3, -0.46)) ≈ [-4.138521384351386, 1.7274528180037634, -1.957000062050696]
 end

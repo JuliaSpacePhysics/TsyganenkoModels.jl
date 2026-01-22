@@ -25,9 +25,13 @@ function igrf_gsm(xgsm, ygsm, zgsm)
     return _sv3(py)
 end
 
-function t89(args...)
-    py = (@pyconst pyimport("geopack.t89").t89)(args...)
-    return _sv3(py)
+
+for f in (:t89, :t96, :t01)
+    mod = "geopack.$f"
+    @eval function $f(args...)
+        py = (@pyconst pyimport($mod).$f)(args...)
+        return _sv3(py)
+    end
 end
 
 function load_igrf(ut)
