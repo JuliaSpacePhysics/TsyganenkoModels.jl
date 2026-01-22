@@ -1,23 +1,22 @@
 # T01 Birkeland Current Functions
 
-function birk_tot(ps, x, y, z)
-    x_sc11 = STATE[].xkappa1 - 1.1; x_sc21 = STATE[].xkappa2 - 1.0  # region1: -1.1, region2: -1.0
-    fx11, fy11, fz11 = birk_1n2(1, 1, ps, x, y, z, STATE[].xkappa1)
-    hx11, hy11, hz11 = birk_shl(SH11, ps, x_sc11, x, y, z)
-    fx12, fy12, fz12 = birk_1n2(1, 2, ps, x, y, z, STATE[].xkappa1)
-    hx12, hy12, hz12 = birk_shl(SH12, ps, x_sc11, x, y, z)
-    fx21, fy21, fz21 = birk_1n2(2, 1, ps, x, y, z, STATE[].xkappa2)
-    hx21, hy21, hz21 = birk_shl(SH21, ps, x_sc21, x, y, z)
-    fx22, fy22, fz22 = birk_1n2(2, 2, ps, x, y, z, STATE[].xkappa2)
-    hx22, hy22, hz22 = birk_shl(SH22, ps, x_sc21, x, y, z)
-    return fx11 + hx11, fy11 + hy11, fz11 + hz11, fx12 + hx12, fy12 + hy12, fz12 + hz12, fx21 + hx21, fy21 + hy21, fz21 + hz21, fx22 + hx22, fy22 + hy22, fz22 + hz22
+function birk_tot(ps, x, y, z, xkappa1, xkappa2)
+    x_sc11 = xkappa1 - 1.1; x_sc21 = xkappa2 - 1.0  # region1: -1.1, region2: -1.0
+    f11 = birk_1n2(1, 1, ps, x, y, z, xkappa1)
+    h11 = birk_shl(SH11, ps, x_sc11, x, y, z)
+    f12 = birk_1n2(1, 2, ps, x, y, z, xkappa1)
+    h12 = birk_shl(SH12, ps, x_sc11, x, y, z)
+    f21 = birk_1n2(2, 1, ps, x, y, z, xkappa2)
+    h21 = birk_shl(SH21, ps, x_sc21, x, y, z)
+    f22 = birk_1n2(2, 2, ps, x, y, z, xkappa2)
+    h22 = birk_shl(SH22, ps, x_sc21, x, y, z)
+    return (f11 .+ h11), (f12 .+ h12), (f21 .+ h21), (f22 .+ h22)
 end
 
 function birk_1n2(numb, mode, ps, x, y, z, xkappa)
     # Select coefficient array based on region and mode
     a = numb == 1 ? (mode == 1 ? A11 : A12) : (mode == 1 ? A21 : A22)
 
-    # Parameters from Python birk_1n2
     beta, rh, eps, b_param, rho_0 = 0.9, 10.0, 3.0, 0.5, 7.0
     dphi = numb == 1 ? 0.055 : 0.03
     dtheta = numb == 1 ? 0.06 : 0.09
@@ -30,7 +29,7 @@ function birk_1n2(numb, mode, ps, x, y, z, xkappa)
 
     # Cylindrical phi
     phi = (xsc == 0.0 && zsc == 0.0) ? 0.0 : atan(-zsc, xsc)
-    sphic, cphic = sin(phi), cos(phi)
+    sphic, cphic = sincos(phi)
 
     # Deformation
     brack = dphi + b_param * rho2 / (rho2 + 1.0) * (rho^2 - 1.0) / (rho2 + rho^2)
@@ -42,7 +41,7 @@ function birk_1n2(numb, mode, ps, x, y, z, xkappa)
     dphisrho = -2.0 * b_param * rho2 * rho / (rho2 + rho^2)^2 * sin(phi) + beta * ps * r1rh^(eps - 1) * rho / (rh * rsc * (1.0 + r1rh^eps)^(1.0 / eps + 1))
     dphisdy = beta * ps * r1rh^(eps - 1) * ysc / (rh * rsc * (1.0 + r1rh^eps)^(1.0 / eps + 1))
 
-    sphics, cphics = sin(phis), cos(phis)
+    sphics, cphics = sincos(phis)
     xs = rho * cphics
     zs = -rho * sphics
 
@@ -72,7 +71,7 @@ end
 
 function one_cone(a, x, y, z, mode, dtheta)
     dr, dt = 1.0e-6, 1.0e-6
-    theta0 = a[31]  # a[30] in Python (0-indexed)
+    theta0 = a[31]
 
     rho2 = x^2 + y^2; rho = sqrt(rho2)
     r = sqrt(rho2 + z^2)
@@ -97,7 +96,7 @@ function one_cone(a, x, y, z, mode, dtheta)
     stsst = sin(thetas) / max(sin(theta), 1.0e-10)
     rsr = rs / r
 
-    # Transform field (Python formula)
+    # Transform field
     br = -rsr / r * stsst * btast * drsdt
     btheta = rsr * stsst * btast * drsdr
     bphi = rsr * bfast * (drsdr * dtsdt - drsdt * dtsdr)
@@ -108,14 +107,10 @@ function one_cone(a, x, y, z, mode, dtheta)
     cf = rho > 1.0e-10 ? x / rho : 1.0
 
     be = br * s + btheta * c
-
-    # a[0] in Python -> a[1] in Julia
     return a[1] * (be * cf - bphi * sf), a[1] * (be * sf + bphi * cf), a[1] * (br * c - btheta * s)
 end
 
 function r_s(a, r, theta)
-    # Python: a[1]/r + a[2]*r/sqrt(r^2+a[10]^2) + a[3]*r/(r^2+a[11]^2) + ...
-    # Julia indices: Python a[i] -> Julia a[i+1]
     cost, cos2t = cos(theta), cos(2.0 * theta)
     return r + a[2] / r + a[3] * r / sqrt(r^2 + a[11]^2) + a[4] * r / (r^2 + a[12]^2) +
         (a[5] + a[6] / r + a[7] * r / sqrt(r^2 + a[13]^2) + a[8] * r / (r^2 + a[14]^2)) * cost +
@@ -123,8 +118,6 @@ function r_s(a, r, theta)
 end
 
 function theta_s(a, r, theta)
-    # Python: (a[16] + a[17]/r + a[18]/r^2 + a[19]*r/sqrt(r^2+a[26]^2))*sin(theta) + ...
-    # Julia indices: Python a[i] -> Julia a[i+1]
     sint, sin2t, sin3t = sin(theta), sin(2.0 * theta), sin(3.0 * theta)
     return theta + (a[17] + a[18] / r + a[19] / r^2 + a[20] * r / sqrt(r^2 + a[27]^2)) * sint +
         (a[21] + a[22] * r / sqrt(r^2 + a[28]^2) + a[23] * r / (r^2 + a[29]^2)) * sin2t +
@@ -132,11 +125,9 @@ function theta_s(a, r, theta)
 end
 
 function fialcos(r, theta, phi, n, theta0, dt)
-    # Full implementation matching Python fialcos
-    sinte = sin(theta)
+    sinte, coste = sincos(theta)
     ro = r * sinte
-    coste = cos(theta)
-    sinfi, cosfi = sin(phi), cos(phi)
+    sinfi, cosfi = sincos(phi)
     tg = sinte / (1.0 + coste)   # tan(theta/2)
     ctg = sinte / (1.0 - coste)  # cot(theta/2)
 
@@ -195,12 +186,11 @@ function fialcos(r, theta, phi, n, theta0, dt)
 end
 
 function birk_shl(a, ps, x_sc, x, y, z)
-    # Python indices: a[84], a[85] -> Julia a[85], a[86]
-    cps, sps = cos(ps), sin(ps)
+    sps, cps = sincos(ps)
     s3ps = 2.0 * cps
     pst1, pst2 = ps * a[85], ps * a[86]
-    st1, ct1 = sin(pst1), cos(pst1)
-    st2, ct2 = sin(pst2), cos(pst2)
+    st1, ct1 = sincos(pst1)
+    st2, ct2 = sincos(pst2)
     x1, z1 = x * ct1 - z * st1, x * st1 + z * ct1
     x2, z2 = x * ct2 - z * st2, x * st2 + z * ct2
 
@@ -208,15 +198,13 @@ function birk_shl(a, ps, x_sc, x, y, z)
     l = 0
     for m in 1:2
         for i in 1:3
-            # Python: a[71+i], a[77+i] -> Julia: a[72+i], a[78+i]
             p, q = a[72 + i], a[78 + i]
-            cypi, sypi = cos(y / p), sin(y / p)
-            cyqi, syqi = cos(y / q), sin(y / q)
+            sypi, cypi = sincos(y / p)
+            syqi, cyqi = sincos(y / q)
             for k in 1:3
-                # Python: a[74+k], a[80+k] -> Julia: a[75+k], a[81+k]
                 r, s = a[75 + k], a[81 + k]
-                szrk, czrk = sin(z1 / r), cos(z1 / r)
-                czsk, szsk = cos(z2 / s), sin(z2 / s)
+                szrk, czrk = sincos(z1 / r)
+                szsk, czsk = sincos(z2 / s)
                 sqpr = sqrt(1.0 / p^2 + 1.0 / r^2)
                 sqqs = sqrt(1.0 / q^2 + 1.0 / s^2)
                 epr = exp(x1 * sqpr)

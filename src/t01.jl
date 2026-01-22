@@ -18,7 +18,7 @@ end
 using .T01Impl: T01_A, t01_extall
 
 """
-    t01(x, y, z, ps, pdyn, dst, byimf, bzimf, g1, g2) -> (Bx, By, Bz)
+    t01(x, y, z, ps, pdyn, dst, byimf, bzimf; g1 = 0.0, g2 = 0.0) -> (Bx, By, Bz)
 
 Compute GSM components of the external magnetic field using the Tsyganenko 01 model.
 
@@ -52,12 +52,8 @@ function t01(x, y, z, ps, pdyn, dst, byimf, bzimf; g1 = 0.0, g2 = 0.0)
     if x < -20.0
         @warn "The model is valid sunward from X=-15 Re only, while you are trying to use it at X=$x"
     end
-
     dst_ast = dst * 0.8 - 13.0 * sqrt(pdyn)
-
-    bx, by, bz = t01_extall(T01_A, pdyn, dst_ast, byimf, bzimf, g1, g2, ps, x, y, z)
-
-    return (bx, by, bz)
+    return t01_extall(T01_A, pdyn, dst_ast, byimf, bzimf, g1, g2, ps, x, y, z)
 end
 
 function t01(x, y, z, t::AbstractTime, args...; kw...)
