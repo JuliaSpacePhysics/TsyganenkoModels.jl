@@ -24,3 +24,5 @@ Modeling of Earth's Magnetosphere Using Spacecraft Magnetometer Data
 
 - [tsyganenko/empirical-models](https://geo.phys.spbu.ru/~tsyganenko/empirical-models/): original source of the Tsyganenko models in Fortran
 - [tsssss/geopack](https://github.com/tsssss/geopack): Python version of geopack and Tsyganenko models
+
+A Julia wrapper for [`geopack`](https://github.com/tsssss/geopack) is available in the `lib/Geopack.jl` directory and can be installed with `using Pkg; Pkg.develop(url="https://github.com/JuliaSpacePhysics/TsyganenkoModels.jl", subdir="lib/Geopack.jl")`. It is mainly used for testing and benchmarking.
