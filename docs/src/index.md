@@ -4,7 +4,14 @@ CurrentModule = TsyganenkoModels
 
 # TsyganenkoModels
 
-Documentation for [TsyganenkoModels](https://github.com/JuliaSpacePhysics/TsyganenkoModels.jl).
+Modeling of Earth's Magnetosphere Using Spacecraft Magnetometer Data.
+
+## Installation
+
+```julia
+using Pkg
+Pkg.add("TsyganenkoModels")
+```
 
 ## Quickstart
 
