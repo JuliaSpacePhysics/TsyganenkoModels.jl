@@ -1,29 +1,27 @@
 # T01 Ring Current Functions
 
-function full_rc(ps, x, y, z)
-    hxsrc, hysrc, hzsrc, hxprc, hyprc, hzprc = src_prc(ps, x, y, z)
-    x_sc = STATE[].sc_sy - 1.0
-    fsx, fsy, fsz = rc_shield(C_SY, ps, x_sc, x, y, z)
-    x_sc = STATE[].sc_pr - 1.0
-    fpx, fpy, fpz = rc_shield(C_PR, ps, x_sc, x, y, z)
-    return hxsrc + fsx, hysrc + fsy, hzsrc + fsz, hxprc + fpx, hyprc + fpy, hzprc + fpz
+function full_rc(ps, x, y, z, phi)
+    hsrc, hprc = src_prc(ps, x, y, z, phi)
+    fs = rc_shield(C_SY, ps, STATE[].sc_sy - 1.0, x, y, z)
+    fp = rc_shield(C_PR, ps, STATE[].sc_pr - 1.0, x, y, z)
+    return hsrc .+ fs, hprc .+ fp
 end
 
-function src_prc(ps, x, y, z)
-    cps, sps = cos(ps), sin(ps)
+function src_prc(ps, x, y, z, phi)
+    sps, cps = sincos(ps)
     xt, zt = x * cps - z * sps, z * cps + x * sps
     xts, yts, zts = xt / STATE[].sc_sy, y / STATE[].sc_sy, zt / STATE[].sc_sy
     xta, yta, zta = xt / STATE[].sc_pr, y / STATE[].sc_pr, zt / STATE[].sc_pr
     bxs, bys, bzs = rc_symm(xts, yts, zts)
     bxa_s, bya_s, bza_s = prc_symm(xta, yta, zta)
-    cp, sp = cos(STATE[].phi), sin(STATE[].phi)
+    sp, cp = sincos(phi)
     xr, yr = xta * cp - yta * sp, xta * sp + yta * cp
     bxa_qr, bya_qr, bza_q = prc_quad(xr, yr, zta)
     bxa_q, bya_q = bxa_qr * cp + bya_qr * sp, -bxa_qr * sp + bya_qr * cp
     bxp, byp, bzp = bxa_s + bxa_q, bya_s + bya_q, bza_s + bza_q
     bxsrc, bysrc, bzsrc = bxs * cps + bzs * sps, bys, bzs * cps - bxs * sps
     bxprc, byprc, bzprc = bxp * cps + bzp * sps, byp, bzp * cps - bxp * sps
-    return bxsrc, bysrc, bzsrc, bxprc, byprc, bzprc
+    return (bxsrc, bysrc, bzsrc), (bxprc, byprc, bzprc)
 end
 
 function rc_symm(x, y, z)
@@ -213,18 +211,23 @@ function bt_prc_q(r, sint, cost)
 end
 
 function rc_shield(a, ps, x_sc, x, y, z)
-    fac_sc = (x_sc + 1.0)^3; cps, sps = cos(ps), sin(ps); s3ps = 2.0 * cps
+    fac_sc = (x_sc + 1.0)^3
+    sps, cps = sincos(ps)
+    s3ps = 2.0 * cps
     pst1, pst2 = ps * a[85], ps * a[86]
-    st1, ct1 = sin(pst1), cos(pst1); st2, ct2 = sin(pst2), cos(pst2)
+    st1, ct1 = sincos(pst1)
+    st2, ct2 = sincos(pst2)
     x1, z1 = x * ct1 - z * st1, x * st1 + z * ct1
     x2, z2 = x * ct2 - z * st2, x * st2 + z * ct2
     bx, by, bz = 0.0, 0.0, 0.0; l = 0
     for m in 1:2, i in 1:3
         p, q = a[72 + i], a[78 + i]
-        cypi, sypi = cos(y / p), sin(y / p); cyqi, syqi = cos(y / q), sin(y / q)
+        sypi, cypi = sincos(y / p)
+        syqi, cyqi = sincos(y / q)
         for k in 1:3
             r, s = a[75 + k], a[81 + k]
-            szrk, czrk = sin(z1 / r), cos(z1 / r); czsk, szsk = cos(z2 / s), sin(z2 / s)
+            szrk, czrk = sincos(z1 / r)
+            szsk, czsk = sincos(z2 / s)
             sqpr, sqqs = sqrt(1.0 / p^2 + 1.0 / r^2), sqrt(1.0 / q^2 + 1.0 / s^2)
             epr, eqs = exp(x1 * sqpr), exp(x2 * sqqs)
             for n in 1:2, nn in 1:2
