@@ -6,6 +6,15 @@ CurrentModule = TsyganenkoModels
 
 Modeling of Earth's Magnetosphere Using Spacecraft Magnetometer Data.
 
+## Features
+
+- Magnetic field model (native Julia implementations)
+  - [x] Supported models: T89, T96
+  - [x] T01/T02: A model of the near magnetosphere with a dawn-dusk asymmetry
+
+!!! note "IRBEM.jl"
+    [`IRBEM.jl`](https://github.com/JuliaSpacePhysics/IRBEM.jl) is a Julia wrapper for the IRBEM Fortran library that exposes magnetic field computation via `GET_FIELD_MULTI` and supports more Tsyganenko models, but may be outdated and slower than the native Julia implementations.
+
 ## Installation
 
 ```julia
@@ -57,7 +66,7 @@ db_jl = t89(𝐫, ps, 2)
 @test db_py == db_jl
 ```
 
-### T96/T01 Model Comparison
+### Model Result Comparison
 
 ```@example comparison
 # T01 model comparison
@@ -79,7 +88,7 @@ db_t01_jl = t01(𝐫, ps, pdyn, dst, byimf, bzimf; g1, g2)
 @test collect(db_t01_jl) ≈ db_t01_py rtol = 1e-6
 ```
 
-The internal magnetic field could be computed using `igrf_Bgsm` from [`GeoCotrans`](https://github.com/JuliaSpacePhysics/GeoCotrans.jl).
+The internal magnetic field could be computed using `igrf` from [`GeoCotrans`](https://github.com/JuliaSpacePhysics/GeoCotrans.jl).
 
 Here we verify the result with `igrf_gsm` from `Geopack`.
 
@@ -87,17 +96,18 @@ Here we verify the result with `igrf_gsm` from `Geopack`.
 using GeoCotrans
 
 b0_py = Geopack.igrf_gsm(xgsm, ygsm, zgsm)
-b0_jl = GeoCotrans.igrf_B(GSM(𝐫) .* GeoCotrans.R🜨, t)
+b0_jl = GeoCotrans.igrf(GSM(𝐫) .* GeoCotrans.R🜨, t)
 @test b0_jl ≈ b0_py rtol = 1e-5
 @test GeoCotrans.get_igrf_coeffs(t)[1] ≈ Geopack.load_igrf(ut)[1]
 ```
 
-Benchmarks
+### Performance Benchmarks
 
 ```@repl comparison
 using Chairmarks
 @b TsyganenkoModels.t89(𝐫, ps, 2), Geopack.t89(2, ps, xgsm, ygsm, zgsm)
-@b GeoCotrans.igrf_B(GSM(xgsm, ygsm, zgsm) .* GeoCotrans.R🜨, t), Geopack.igrf_gsm(xgsm, ygsm, zgsm)
+@b TsyganenkoModels.t01(𝐫, ps, pdyn, dst, byimf, bzimf), Geopack.t01([pdyn, dst, byimf, bzimf, 0, 0], ps, xgsm, ygsm, zgsm)
+@b GeoCotrans.igrf(GSM(xgsm, ygsm, zgsm) .* GeoCotrans.R🜨, t), Geopack.igrf_gsm(xgsm, ygsm, zgsm)
 ```
 
 ## API
