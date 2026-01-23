@@ -9,8 +9,10 @@ Modeling of Earth's Magnetosphere Using Spacecraft Magnetometer Data.
 ## Features
 
 - Magnetic field model (native Julia implementations)
-  - [x] Supported models: T89, T96
+  - [x] T89: A magnetospheric magnetic field model with a warped tail current sheet
+  - [x] T96: Effects of the solar wind conditions on the global magnetospheric configuration
   - [x] T01/T02: A model of the near magnetosphere with a dawn-dusk asymmetry
+  - [x] TS05/TS04: a dynamical empirical model of the inner storm-time magnetosphere
 
 !!! note "IRBEM.jl"
     [`IRBEM.jl`](https://github.com/JuliaSpacePhysics/IRBEM.jl) is a Julia wrapper for the IRBEM Fortran library that exposes magnetic field computation via `GET_FIELD_MULTI` and supports more Tsyganenko models, but may be outdated and slower than the native Julia implementations.
@@ -83,7 +85,7 @@ db_t96_jl = t96(𝐫, ps, pdyn, dst, byimf, bzimf)
 @test collect(db_t96_jl) ≈ db_t96_py rtol = 1e-6
 
 db_t01_py = Geopack.t01(parmod, ps, xgsm, ygsm, zgsm)
-db_t01_jl = t01(𝐫, ps, pdyn, dst, byimf, bzimf; g1, g2)
+db_t01_jl = t01(𝐫, ps, pdyn, dst, byimf, bzimf)
 
 @test collect(db_t01_jl) ≈ db_t01_py rtol = 1e-6
 ```
@@ -106,6 +108,7 @@ b0_jl = GeoCotrans.igrf(GSM(𝐫) .* GeoCotrans.R🜨, t)
 ```@repl comparison
 using Chairmarks
 @b TsyganenkoModels.t89(𝐫, ps, 2), Geopack.t89(2, ps, xgsm, ygsm, zgsm)
+@b TsyganenkoModels.t96(𝐫, ps, pdyn, dst, byimf, bzimf), Geopack.t96([pdyn, dst, byimf, bzimf, 0, 0], ps, xgsm, ygsm, zgsm)
 @b TsyganenkoModels.t01(𝐫, ps, pdyn, dst, byimf, bzimf), Geopack.t01([pdyn, dst, byimf, bzimf, 0, 0], ps, xgsm, ygsm, zgsm)
 @b GeoCotrans.igrf(GSM(xgsm, ygsm, zgsm) .* GeoCotrans.R🜨, t), Geopack.igrf_gsm(xgsm, ygsm, zgsm)
 ```

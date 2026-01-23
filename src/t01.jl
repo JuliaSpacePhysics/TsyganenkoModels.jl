@@ -11,7 +11,7 @@
 #
 
 module T01Impl
-    using ..TsyganenkoModels: birk_tot, full_rc, dipole, deformed
+    using ..TsyganenkoModels: birk_tot, full_rc, dipole, deformed, shlcar3x3
     include("t01_consts.jl")
     include("t01_funcs.jl")
 end
@@ -55,14 +55,4 @@ function t01(x, y, z, ps, pdyn, dst, byimf, bzimf; g1 = 0.0, g2 = 0.0)
     end
     dst_ast = dst * 0.8 - 13.0 * sqrt(pdyn)
     return T01Impl.extall(pdyn, dst_ast, byimf, bzimf, g1, g2, ps, x, y, z)
-end
-
-function t01(x, y, z, t::AbstractTime, args...; kw...)
-    ps = dipole_tilt(t)
-    return t01(x, y, z, ps, args...; kw...)
-end
-
-@inline function t01(r, args...; kw...)
-    @assert length(r) == 3
-    return t01(r[1], r[2], r[3], args...; kw...)
 end

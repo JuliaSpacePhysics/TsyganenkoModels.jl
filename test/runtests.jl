@@ -28,9 +28,10 @@ end
     # T01 model test (reference from Python geopack.t01)
     result_t01 = t01(r_gsm, ps, pdyn, dst, byimf, bzimf)
     @test collect(result_t01) ≈ [46.972663449207076, 1.5442350206329172, -31.3541847716317] rtol = 1.0e-6
+    @test collect(ts04(r_gsm, ps, (pdyn, dst, byimf, bzimf))) ≈ [25.835474201385036, 1.5987724615979861, -18.1054945348421]
 end
 
-@testset "External magnetic fields - T96" begin
+@testset "External magnetic fields - Components" begin
     @test TsyganenkoModels.r2inner(1, 2, 3) == (-10.166350217481673, 16.22849226559209, -4.448363653306496)
     @test collect(TsyganenkoModels.r2sheet(1, 2, 3)) ≈ [9.453799383727832, 2.8367547754153284, 0.8914493552029839]
 
@@ -39,4 +40,7 @@ end
 
     # Geopack.geopack.t96.birk1tot_02(1,2,3,-0.46)
     @test collect(TsyganenkoModels.birk1tot_02(1, 2, 3, -0.46)) ≈ [-4.138521384351386, 1.7274528180037634, -1.957000062050696]
+
+    ps = -0.46049650108726486
+    @test collect(TsyganenkoModels.shlcar3x3(1, 2, 3, ps)) ≈ [-6.624367426893622, 0.5530405783442072, 19.261862546642284]
 end
