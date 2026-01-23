@@ -65,7 +65,7 @@ db_py = Geopack.t89(2, ps, xgsm, ygsm, zgsm)
 # using TsyganenkoModels
 db_jl = t89(𝐫, ps, 2)
 
-@test db_py == db_jl
+@test db_py ≈ db_jl
 ```
 
 ### Model Result Comparison
