@@ -23,12 +23,12 @@ end
     byimf = 2.0  # IMF By [nT]
     bzimf = -5.0 # IMF Bz [nT]
     result = t96(r_gsm, ps, pdyn, dst, byimf, bzimf)
-    @test collect(result) ≈ [61.17831041891597, -1.4611958991749145, -40.44973158310239]
+    @test result ≈ [61.17831041891597, -1.4611958991749145, -40.44973158310239]
 
     # T01 model test (reference from Python geopack.t01)
     result_t01 = t01(r_gsm, ps, pdyn, dst, byimf, bzimf)
-    @test collect(result_t01) ≈ [46.972663449207076, 1.5442350206329172, -31.3541847716317] rtol = 1.0e-6
-    @test collect(ts04(r_gsm, ps, (pdyn, dst, byimf, bzimf))) ≈ [25.835474201385036, 1.5987724615979861, -18.1054945348421]
+    @test result_t01 ≈ [46.972663449207076, 1.5442350206329172, -31.3541847716317] rtol = 1.0e-6
+    @test ts04(r_gsm, ps, (pdyn, dst, byimf, bzimf)) ≈ [25.835474201385036, 1.5987724615979861, -18.1054945348421]
 end
 
 @testset "External magnetic fields - Components" begin
