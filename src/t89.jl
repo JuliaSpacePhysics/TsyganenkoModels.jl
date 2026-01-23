@@ -1,17 +1,9 @@
-#
 # Tsyganenko 89 Magnetospheric Magnetic Field Model (T89c/d)
-#
-# Based on the Fortran implementation by N.A. Tsyganenko
-# https://geo.phys.spbu.ru/~tsyganenko/models/t89/T89d_dp.for
-# Reference: Tsyganenko, N.A., Planet. Space Sci., 37, 5-20, 1989
-#
-export t89
 
 # Fixed constants
 const A02 = 25.0
 const XLW2 = 170.0
 const YN = 30.0
-const RPI = 0.31830989  # 1/(2π)
 const RT = 30.0
 const XD = 0.0
 const XLD2 = 40.0
@@ -63,9 +55,9 @@ HEOS-1 and -2 (1969-1974), and ISEE-1 and -2 spacecraft data.
 # References
 - Tsyganenko, N.A., "A magnetospheric magnetic field model with a warped tail current sheet",
   Planet. Space Sci., 37, 5-20, 1989.
+- [Fortran implementation](https://geo.phys.spbu.ru/~tsyganenko/models/t89/T89d_dp.for)
 """
 function t89(x, y, z, ps, iopt; cache = nothing)
-    # Validate input
     @assert 1 ≤ iopt ≤ 7 "iopt must be between 1 and 7"
 
     # Get parameters for this Kp level
@@ -114,7 +106,7 @@ function t89_init(iopt::Int)
     HRDXL = 0.5 * RDXL
     A6H = AK6 * 0.5
     A9T = AK9 / 3.0
-    YNP = RPI / YN * 0.5
+    YNP = 1 / π / YN * 0.5
     YND = 2.0 * YN
 
     AK610 = AK6 * W1 + AK10 * W5
@@ -244,8 +236,6 @@ function _t89_compute(x, y, z, ps, c)
 
     DER21 = BRRZ1 * YZR
     DER22 = BRRZ2 * YZR
-    DER216 = DER21 * TLT2
-    DER217 = DER22 * TLT2
     WTFS = WT * FS
     DBZC1 = W * F5 + XDWX * F7 + WTFS * F1
     DBZC2 = W * F9 + XDWX * F1 + WTFS * F3
@@ -253,10 +243,8 @@ function _t89_compute(x, y, z, ps, c)
     DER12 = DBXC2 * CPS + DBZC2 * SPS
     DER31 = DBZC1 * CPS - DBXC1 * SPS
     DER32 = DBZC2 * CPS - DBXC2 * SPS
-    DER116 = DER11 * TLT2
-    DER117 = DER12 * TLT2
-    DER316 = DER31 * TLT2
-    DER317 = DER32 * TLT2
+    DER16 = (DER11, DER21, DER31) .* TLT2
+    DER17 = (DER12, DER22, DER32) .* TLT2
 
     # Closure currents contribution
     ZPL = z + RT
@@ -278,18 +266,8 @@ function _t89_compute(x, y, z, ps, c)
     WCSM = WC / SMN
     FXYP = WCSP * SZRP
     FXYM = WCSM * SZRM
-    FXPL = x * FXYP
-    FXMN = -x * FXYM
-    FYPL = y * FXYP
-    FYMN = -y * FXYM
-    FZPL = WCSP + XYWC * SZRP
-    FZMN = WCSM + XYWC * SZRM
-    DER13 = FXPL + FXMN
-    DER14 = (FXPL - FXMN) * SPS
-    DER23 = FYPL + FYMN
-    DER24 = (FYPL - FYMN) * SPS
-    DER33 = FZPL + FZMN
-    DER34 = (FZPL - FZMN) * SPS
+    FPL = (x * FXYP, y * FXYP, WCSP + XYWC * SZRP)
+    FMN = (-x * FXYM, -y * FXYM, WCSM + XYWC * SZRM)
 
     # Chapman-Ferraro sources
     EX = exp(x / c.DX)
@@ -309,12 +287,7 @@ function _t89_compute(x, y, z, ps, c)
         c.AK812 * ESZY2 + c.AK913 * ESZZ2
 
     # Combine all contributions
-    BXCL = c.AK3 * DER13 + c.AK4 * DER14
-    BYCL = c.AK3 * DER23 + c.AK4 * DER24
-    BZCL = c.AK3 * DER33 + c.AK4 * DER34
-
-    BXT = c.AK1 * DER11 + c.AK2 * DER12 + BXCL + c.AK16 * DER116 + c.AK17 * DER117
-    BYT = c.AK1 * DER21 + c.AK2 * DER22 + BYCL + c.AK16 * DER216 + c.AK17 * DER217
-    BZT = c.AK1 * DER31 + c.AK2 * DER32 + BZCL + c.AK16 * DER316 + c.AK17 * DER317
-    return @. (BXT, BYT, BZT) + c.AK5 * (DER15, DER25, DER35) + (SX1, SY1, SZ1)
+    BCL = @. c.AK3 * (FPL + FMN) + c.AK4 * SPS * (FPL - FMN)
+    BT = @. c.AK1 * (DER11, DER21, DER31) + c.AK2 * (DER12, DER22, DER32)
+    return @. BT + BCL + c.AK5 * (DER15, DER25, DER35) + c.AK16 * DER16 + c.AK17 * DER17 + (SX1, SY1, SZ1)
 end
