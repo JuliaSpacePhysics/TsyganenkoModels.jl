@@ -6,6 +6,9 @@ export t89, t96, t01, dipole_tilt
 using LinearAlgebra: dot
 
 include("dipole.jl")
+include("Birkeland_current.jl")
+include("ring_current.jl")
+include("tail.jl")
 include("t89.jl")
 include("t96.jl")
 include("t01.jl")
