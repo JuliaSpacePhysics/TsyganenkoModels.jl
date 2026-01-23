@@ -1,24 +1,11 @@
 # T01 Core Functions
-using ..TsyganenkoModels: dipole
 using LinearAlgebra: dot
 
-mutable struct T01State
-    dxshift1::Float64
-    dxshift2::Float64
-    d::Float64
-    deltady::Float64
-    sc_sy::Float64
-    sc_pr::Float64
-    g::Float64
-end
-const STATE = Ref(T01State(0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0))
-
-function t01_extall(pdyn, dst, byimf, bzimf, g1, g2, ps, x, y, z)
+function extall(pdyn, dst, byimf, bzimf, g1, g2, ps, x, y, z)
     a = T01_A
     rh2 = -5.2
     xappa = (pdyn / 2.0)^a[39]
     rh0 = a[40]
-    STATE[].g = a[41]
     xappa3 = xappa^3
     xx, yy, zz = x * xappa, y * xappa, z * xappa
     sps = sin(ps)
@@ -51,9 +38,10 @@ function t01_extall(pdyn, dst, byimf, bzimf, g1, g2, ps, x, y, z)
         bcf = shlcar3x3(xx, yy, zz, ps)
 
         # Tail
-        STATE[].dxshift1 = a[26] + a[27] * g2; STATE[].dxshift2 = 0.0
-        STATE[].d = a[28]; STATE[].deltady = a[29]
-        bt1, bt2 = deformed(ps, xx, yy, zz, rh0)
+        state = (;
+            dxshift1 = a[26] + a[27] * g2, dxshift2 = 0.0, d = a[28], deltady = a[29], g = a[41],
+        )
+        bt1, bt2 = deformed(ps, xx, yy, zz, rh0, state)
 
         # Birk
         xkappa1 = a[35] + a[36] * g2; xkappa2 = a[37] + a[38] * g2
@@ -62,9 +50,9 @@ function t01_extall(pdyn, dst, byimf, bzimf, g1, g2, ps, x, y, z)
         # RC
         phi = 0.5π * tanh(abs(dst) / a[34])
         znam = max(abs(dst), 20.0)
-        STATE[].sc_sy = a[30] * (20.0 / znam)^a[31] * xappa
-        STATE[].sc_pr = a[32] * (20.0 / znam)^a[33] * xappa
-        bsrc, bprc = full_rc(ps, xx, yy, zz, phi)
+        sc_sy = a[30] * (20.0 / znam)^a[31] * xappa
+        sc_pr = a[32] * (20.0 / znam)^a[33] * xappa
+        bsrc, bprc = full_rc(ps, xx, yy, zz, phi, sc_sy, sc_pr)
 
         # Amplitudes
         dlp1 = (pdyn / 2.0)^a[42]; dlp2 = (pdyn / 2.0)^a[43]
@@ -167,7 +155,3 @@ end
 
     return bx, by, bz
 end
-
-include("t01_tail.jl")
-include("t01_rc.jl")
-include("t01_birk.jl")
