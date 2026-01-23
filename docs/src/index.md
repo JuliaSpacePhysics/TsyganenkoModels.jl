@@ -82,12 +82,12 @@ parmod = [pdyn, dst, byimf, bzimf, g1, g2]
 
 db_t96_py = Geopack.t96(parmod, ps, xgsm, ygsm, zgsm)
 db_t96_jl = t96(𝐫, ps, pdyn, dst, byimf, bzimf)
-@test collect(db_t96_jl) ≈ db_t96_py rtol = 1e-6
+@test db_t96_jl ≈ db_t96_py rtol = 1e-6
 
 db_t01_py = Geopack.t01(parmod, ps, xgsm, ygsm, zgsm)
 db_t01_jl = t01(𝐫, ps, pdyn, dst, byimf, bzimf)
 
-@test collect(db_t01_jl) ≈ db_t01_py rtol = 1e-6
+@test db_t01_jl ≈ db_t01_py rtol = 1e-6
 ```
 
 The internal magnetic field could be computed using `igrf` from [`GeoCotrans`](https://github.com/JuliaSpacePhysics/GeoCotrans.jl).
