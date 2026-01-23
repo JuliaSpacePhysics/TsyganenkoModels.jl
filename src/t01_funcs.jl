@@ -1,6 +1,3 @@
-# T01 Core Functions
-using LinearAlgebra: dot
-
 function extall(pdyn, dst, byimf, bzimf, g1, g2, ps, x, y, z)
     a = T01_A
     rh2 = -5.2

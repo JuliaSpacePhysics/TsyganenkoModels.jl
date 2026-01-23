@@ -75,13 +75,6 @@ function t89(x, y, z, ps, iopt; cache = nothing)
     return GSM(_t89_compute(x, y, z, ps, cache))
 end
 
-function t89(x, y, z, t::AbstractTime, iopt; kw...)
-    ps = dipole_tilt(t)
-    return t89(x, y, z, ps, iopt; kw...)
-end
-
-t89(r, args...; kwargs...) = t89(r[1], r[2], r[3], args...; kwargs...)
-
 function t89_init(iopt::Int)
     # Extract parameters for this Kp level
     A = @view PARAM[:, iopt]

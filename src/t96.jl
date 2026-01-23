@@ -120,9 +120,3 @@ function t96(x, y, z, ps, pdyn, dst, byimf, bzimf)
         oimf .- dipole(ps, x, y, z)
     end
 end
-
-# Allow vector input for convenience
-@inline function t96(r, args...)
-    @assert length(r) == 3
-    return t96(r[1], r[2], r[3], args...)
-end

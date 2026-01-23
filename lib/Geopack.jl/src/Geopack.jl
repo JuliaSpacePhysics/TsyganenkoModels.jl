@@ -26,7 +26,7 @@ function igrf_gsm(xgsm, ygsm, zgsm)
 end
 
 
-for f in (:t89, :t96, :t01)
+for f in (:t89, :t96, :t01, :t04)
     mod = "geopack.$f"
     @eval function $f(args...)
         py = (@pyconst pyimport($mod).$f)(args...)

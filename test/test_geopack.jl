@@ -32,4 +32,8 @@ using Test
     @test pyconvert(Bool, geopack.t04.shlcar3x3(1, 2, 3, ps) == geopack.t01.shlcar3x3(1, 2, 3, ps))
     @test pyconvert(Bool, geopack.t04.full_rc(0, ps, 1, 2, 3) == geopack.t01.full_rc(0, ps, 1, 2, 3))
     @test pyconvert(Bool, geopack.t04.deformed(0, ps, 1, 2, 3) == geopack.t01.deformed(0, ps, 1, 2, 3))
+
+    xgsm, ygsm, zgsm = (-5.1, 0.3, 2.8)
+    ps = -0.533585131
+    @test Geopack.t04([pdyn, dst, byimf, bzimf, 0, 0, 0, 0, 0, 0, 0], ps, xgsm, ygsm, zgsm) == [25.835474201385036, 1.5987724615979861, -18.1054945348421]
 end
