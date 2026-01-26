@@ -26,22 +26,37 @@ Pkg.add("TsyganenkoModels")
 
 ## Quickstart
 
+The model interface allows you to configure a model once and use it for multiple field calculations:
+
 ```@example quickstart
 using TsyganenkoModels
 using Dates
 
+# Create model configurations
+model_t89 = T89(2)  # Kp level 2
+param = (; pdyn=2.0, dst=-87.0, byimf=2.0, bzimf=-5.0)
+# pdyn: Solar wind dynamic pressure [nPa]
+# dst: Dst index [nT]
+# byimf: IMF By [nT]
+# bzimf: IMF Bz [nT]
+
+# Calculate fields at position
 t = DateTime("1970-01-01T00:01:40")
 𝐫 = [1, 2, 3]
-iopt = 2
-db_jl_t = t89(𝐫, t, iopt)
+ps = -0.533585131  # dipole tilt angle [radians]
 
-pdyn = 2.0   # Solar wind dynamic pressure [nPa]
-dst = -87.0  # Dst index [nT]
-byimf = 2.0  # IMF By [nT]
-bzimf = -5.0 # IMF Bz [nT]
-ps = -0.533585131
-result_t01 = t01(𝐫, ps, pdyn, dst, byimf, bzimf)
-result_t01 = t96(𝐫, ps, pdyn, dst, byimf, bzimf)
+# Using dipole tilt angle
+B_t89 = T89(2)(𝐫, ps)
+```
+
+```@repl quickstart
+# Compare with other models
+B_t96 = T96(param)(𝐫, ps)
+B_t01 = T01(param)(𝐫, ps)
+B_ts04 = TS04(param)(𝐫, ps)
+
+# Using time (auto-calculates dipole tilt)
+T89(2)(𝐫, t)
 ```
 
 ## Comparison with [`geopack`](https://github.com/tsssss/geopack)
@@ -58,12 +73,13 @@ t = DateTime("1970-01-01T00:01:40")
 
 # using geopack
 xgsm, ygsm, zgsm = 𝐫
-ut = datetime2unix(t)    # 1970-01-01/00:01:40 UT.
+opt = 2
+ut = datetime2unix(t)
 ps = Geopack.recalc(ut)
-db_py = Geopack.t89(2, ps, xgsm, ygsm, zgsm)
+db_py = Geopack.t89(opt, ps, xgsm, ygsm, zgsm)
 
 # using TsyganenkoModels
-db_jl = t89(𝐫, ps, 2)
+db_jl = T89(opt)(𝐫, ps)
 
 @test db_py ≈ db_jl
 ```
@@ -81,11 +97,11 @@ g2 = 0.0
 parmod = [pdyn, dst, byimf, bzimf, g1, g2]
 
 db_t96_py = Geopack.t96(parmod, ps, xgsm, ygsm, zgsm)
-db_t96_jl = t96(𝐫, ps, pdyn, dst, byimf, bzimf)
+db_t96_jl = T96(; pdyn, dst, byimf, bzimf)(𝐫, ps)
 @test db_t96_jl ≈ db_t96_py rtol = 1e-6
 
 db_t01_py = Geopack.t01(parmod, ps, xgsm, ygsm, zgsm)
-db_t01_jl = t01(𝐫, ps, pdyn, dst, byimf, bzimf)
+db_t01_jl = T01(; pdyn, dst, byimf, bzimf)(𝐫, ps)
 
 @test db_t01_jl ≈ db_t01_py rtol = 1e-6
 ```
@@ -107,10 +123,11 @@ b0_jl = GeoCotrans.igrf(GSM(𝐫) .* GeoCotrans.R🜨, t)
 
 ```@repl comparison
 using Chairmarks
-@b TsyganenkoModels.t89(𝐫, ps, 2), Geopack.t89(2, ps, xgsm, ygsm, zgsm)
-@b TsyganenkoModels.t96(𝐫, ps, pdyn, dst, byimf, bzimf), Geopack.t96([pdyn, dst, byimf, bzimf, 0, 0], ps, xgsm, ygsm, zgsm)
-@b TsyganenkoModels.t01(𝐫, ps, pdyn, dst, byimf, bzimf), Geopack.t01([pdyn, dst, byimf, bzimf, 0, 0], ps, xgsm, ygsm, zgsm)
-@b GeoCotrans.igrf(GSM(xgsm, ygsm, zgsm) .* GeoCotrans.R🜨, t), Geopack.igrf_gsm(xgsm, ygsm, zgsm)
+@b TsyganenkoModels.T89(2)($𝐫, $ps), Geopack.t89(2, $ps, $𝐫...)
+@b TsyganenkoModels.T96($pdyn, $dst, $byimf, $bzimf)($𝐫, $ps), Geopack.t96([$pdyn, $dst, $byimf, $bzimf, 0, 0], $ps, $𝐫...)
+@b TsyganenkoModels.T01(; pdyn, dst, byimf, bzimf)($𝐫, $ps), Geopack.t01([pdyn, dst, byimf, bzimf, 0, 0], $ps, $𝐫...)
+
+@b GeoCotrans.igrf(GSM($𝐫) .* GeoCotrans.R🜨, t), Geopack.igrf_gsm($𝐫...)
 ```
 
 ## API

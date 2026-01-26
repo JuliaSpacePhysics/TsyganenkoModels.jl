@@ -15,20 +15,17 @@ end
     ps = -0.533585131
     iopt = 2
     B_true = [20.77213175686351, -0.6465547428023687, -15.071641970338984]
-    @test t89(r_gsm, ps, iopt) == B_true
-    @test t89(r_gsm, time, iopt) ≈ B_true rtol = 1.0e-4
+    @test T89(iopt)(r_gsm, ps) == B_true
+    @test T89(iopt)(r_gsm, time) ≈ B_true rtol = 1.0e-4
 
-    pdyn = 2.0   # Solar wind dynamic pressure [nPa]
-    dst = -87.0  # Dst index [nT]
-    byimf = 2.0  # IMF By [nT]
-    bzimf = -5.0 # IMF Bz [nT]
-    result = t96(r_gsm, ps, pdyn, dst, byimf, bzimf)
+    param = (; pdyn = 2.0, dst = -87.0, byimf = 2.0, bzimf = -5.0)
+    result = T96(param)(r_gsm, ps)
     @test result ≈ [61.17831041891597, -1.4611958991749145, -40.44973158310239]
 
     # T01 model test (reference from Python geopack.t01)
-    result_t01 = t01(r_gsm, ps, pdyn, dst, byimf, bzimf)
+    result_t01 = T01(param)(r_gsm, ps)
     @test result_t01 ≈ [46.972663449207076, 1.5442350206329172, -31.3541847716317] rtol = 1.0e-6
-    @test ts04(r_gsm, ps, (pdyn, dst, byimf, bzimf)) ≈ [25.835474201385036, 1.5987724615979861, -18.1054945348421]
+    @test TS04(param)(r_gsm, ps) ≈ [25.835474201385036, 1.5987724615979861, -18.1054945348421]
 end
 
 @testset "External magnetic fields - Components" begin

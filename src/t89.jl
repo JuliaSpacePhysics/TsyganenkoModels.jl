@@ -37,25 +37,6 @@ const PARAM = [
 
 Compute GSM components of the magnetic field [nT] produced by extraterrestrial current systems
 in the geomagnetosphere using the Tsyganenko 89 model, given the position `𝐫` or `x`, `y`, `z` in GSM coordinates [Earth radii], the geodipole tilt angle `ps` [radians] / time `t`.
-
-# Parameters
-- `iopt`: Ground disturbance level index (1-7)
-  - 1: Kp = 0, 0+
-  - 2: Kp = 1-, 1, 1+
-  - 3: Kp = 2-, 2, 2+
-  - 4: Kp = 3-, 3, 3+
-  - 5: Kp = 4-, 4, 4+
-  - 6: Kp = 5-, 5, 5+
-  - 7: Kp ≥ 6-
-
-# Model Description
-Valid up to geocentric distances of 70 RE. Based on merged IMP-A through J (1966-1974),
-HEOS-1 and -2 (1969-1974), and ISEE-1 and -2 spacecraft data.
-
-# References
-- Tsyganenko, N.A., "A magnetospheric magnetic field model with a warped tail current sheet",
-  Planet. Space Sci., 37, 5-20, 1989.
-- [Fortran implementation](https://geo.phys.spbu.ru/~tsyganenko/models/t89/T89d_dp.for)
 """
 function t89(x, y, z, ps, iopt; cache = nothing)
     @assert 1 ≤ iopt ≤ 7 "iopt must be between 1 and 7"
@@ -66,6 +47,8 @@ function t89(x, y, z, ps, iopt; cache = nothing)
     end
     return GSM(_t89_compute(x, y, z, ps, cache))
 end
+
+(m::T89)(x, y, z, ps) = t89(x, y, z, ps, m.iopt; cache = m.cache)
 
 function t89_init(iopt::Int)
     # Extract parameters for this Kp level
