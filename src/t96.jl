@@ -18,30 +18,6 @@ include("t96_consts.jl")
     t96(x, y, z, ps, pdyn, dst, byimf, bzimf) -> (Bx, By, Bz)
 
 Compute GSM components of the external magnetic field using the Tsyganenko 96 model.
-
-# Parameters
-- `x, y, z`: Position in GSM coordinates [Earth radii]
-- `ps`: Geodipole tilt angle [radians]
-- `pdyn`: Solar wind dynamic pressure [nPa]
-- `dst`: Dst index [nT]
-- `byimf`: IMF By component [nT]
-- `bzimf`: IMF Bz component [nT]
-
-# Returns
-- `(Bx, By, Bz)`: Magnetic field components in GSM coordinates [nT]
-
-# Model Description
-Data-based model calibrated by solar wind pressure, Dst index, and IMF By/Bz components.
-Includes realistic magnetopause, Region 1 and 2 Birkeland current systems, and IMF penetration.
-
-Valid parameter ranges (caution needed outside these ranges):
-- Pdyn: 0.5 to 10 nPa
-- Dst: -100 to +20 nT
-- ByIMF and BzIMF: -10 to +10 nT
-
-# References
-- Tsyganenko & Stern, JGR, v.101, p.27187-27198, 1996
-- Tsyganenko, JGR, v.100, p.5599-5612, 1995
 """
 function t96(x, y, z, ps, pdyn, dst, byimf, bzimf)
     sps = sin(ps)
@@ -98,7 +74,7 @@ function t96(x, y, z, ps, pdyn, dst, byimf, bzimf)
     aro = asq + rho2
     sigma = sqrt((aro + axx0 + sqrt((aro + axx0)^2 - 4 * asq * axx0)) / (2 * asq))
 
-    return if sigma < (S0 + DSIG)
+    out = if sigma < (S0 + DSIG)
         cf = dipshld(ps, xx, yy, zz)
         brc, bt2, bt3 = tailrc96(sps, xx, yy, zz)
         r1 = birk1tot_02(ps, xx, yy, zz)
@@ -108,7 +84,7 @@ function t96(x, y, z, ps, pdyn, dst, byimf, bzimf)
         rimfz = rimfzs * ct - rimfys * st
         f = @. (rimfx, rimfy, rimfz) * rimfampl + cf * xappa3 + b1ampl * r1 + b2ampl * r2 + rcampl * brc + tampl2 * bt2 + tampl3 * bt3
 
-        return if sigma < (S0 - DSIG)
+        if sigma < (S0 - DSIG)
             f
         else
             fint = 0.5 * (1 - (sigma - S0) / DSIG)
@@ -119,4 +95,7 @@ function t96(x, y, z, ps, pdyn, dst, byimf, bzimf)
     else
         oimf .- dipole(ps, x, y, z)
     end
+    return GSM(out)
 end
+
+(m::T96)(x, y, z, ps) = t96(x, y, z, ps, m.pdyn, m.dst, m.byimf, m.bzimf)
