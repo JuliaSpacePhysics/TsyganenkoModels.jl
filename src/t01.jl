@@ -24,12 +24,10 @@ using .T01Impl
 Compute GSM components of the external magnetic field using the Tsyganenko 01 model.
 """
 function t01(x, y, z, ps, pdyn, dst, byimf, bzimf, g1 = 0.0, g2 = 0.0)
-    if x < -20.0
-        @warn "The model is valid sunward from X=-15 Re only, while you are trying to use it at X=$x"
-    end
+    x < -20.0 && @warn "The model is valid sunward from X=-15 Re only, while you are trying to use it at X=$x"
     dst_ast = dst * 0.8 - 13.0 * sqrt(pdyn)
     return GSM(T01Impl.extall(pdyn, dst_ast, byimf, bzimf, g1, g2, ps, x, y, z))
 end
 
 # Functor interfaces for T01
-(m::T01)(x, y, z, ps) = t01(x, y, z, ps, m.pdyn, m.dst, m.byimf, m.bzimf, m.g1, m.g2)
+evalmodel(m::T01, x, y, z, ps) = t01(x, y, z, ps, m.pdyn, m.dst, m.byimf, m.bzimf, m.g1, m.g2)

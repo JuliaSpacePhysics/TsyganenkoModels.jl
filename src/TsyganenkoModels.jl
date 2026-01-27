@@ -2,9 +2,13 @@ module TsyganenkoModels
 
 using Dates: AbstractTime
 using GeoCotrans
+using GeoCotrans: ExternalFieldModel, GSM, Cartesian3
+import GeoCotrans: evalmodel, getcsys
 using LinearAlgebra: dot
 export t89, t96, t01, ts04, dipole_tilt
 export T89, T96, T01, TS04
+
+export getcsys, GSM, GEO
 
 include("models.jl")
 include("dipole.jl")
@@ -27,11 +31,12 @@ end
 for T in (:T89, :T96, :T01, :TS04)
     # support namedtuple input
     @eval $T(nt::NamedTuple) = $T(; nt...)
-    # support functor interface
-    @eval (m::$T)(x, y, z, t::AbstractTime) = m(x, y, z, dipole_tilt(t))
-    @eval (m::$T)(r, args...; kw...) = begin
+end
+
+for T in (:T89, :T96, :T01, :TS04)
+    @eval (m::$T)(r::Union{Tuple, AbstractVector}, ps::Real; kw...) = begin
         @assert length(r) == 3
-        m(r[1], r[2], r[3], args...; kw...)
+        evalmodel(m, r[1], r[2], r[3], ps; kw...)
     end
 end
 
