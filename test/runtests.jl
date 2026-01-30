@@ -3,6 +3,7 @@
 using TsyganenkoModels
 using Test
 using Aqua
+using Chairmarks
 
 @testset "Code quality (Aqua.jl)" begin
     Aqua.test_all(TsyganenkoModels)
@@ -26,6 +27,18 @@ end
     result_t01 = T01(param)(r_gsm, ps)
     @test result_t01 ≈ [46.972663449207076, 1.5442350206329172, -31.3541847716317] rtol = 1.0e-6
     @test TS04(param)(r_gsm, ps) ≈ [25.835474201385036, 1.5987724615979861, -18.1054945348421]
+end
+
+@testset "Composite magnetic fields" begin
+    using Dates
+    time = DateTime(2001, 1, 1, 2, 3, 4)
+    r_gsm = GSM(-5.1, 0.3, 2.8)
+    model = TsyIGRF()
+    B_true = [289.34552144342604, -20.162245780356457, -68.44100172746695]
+    @test IGRF()(r_gsm, time) + T89(iopt = 3)(r_gsm, time) ≈ B_true
+    @test model(r_gsm, time) ≈ B_true
+
+    @info @b TsyIGRF()($r_gsm, $time), IGRF()($r_gsm, $time) + T89(iopt = 3)($r_gsm, $time)
 end
 
 @testset "External magnetic fields - Components" begin
