@@ -1,6 +1,6 @@
 name = "TsyganenkoModels"
 uuid = "14dfbe45-703c-4bf3-b096-15691adbb981"
-version = "0.1.1"
+version = "0.1.2"
 authors = ["Beforerr <zzj956959688@gmail.com> and contributors"]
 
 [workspace]
