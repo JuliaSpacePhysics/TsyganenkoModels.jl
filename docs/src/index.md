@@ -56,7 +56,12 @@ B_t01 = T01(param)(𝐫, ps)
 B_ts04 = TS04(param)(𝐫, ps)
 
 # Using time (auto-calculates dipole tilt)
-T89(2)(𝐫, t)
+T89(3)(𝐫, t)
+
+# Using `TsyIGRF` to combine IGRF14 model and one Tsyganenko model (default T89)
+TsyIGRF()(𝐫, t)
+# This is equivalent to
+IGRF()(GSM(𝐫), t) .+ T89(3)(𝐫, t)
 ```
 
 ## Comparison with [`geopack`](https://github.com/tsssss/geopack)
