@@ -96,15 +96,11 @@ function extall(pdyn, dst, byimf, bzimf, w1, w2, w3, w4, w5, w6, ps, x, y, z)
             # Interpolation region near magnetopause
             fint = 0.5 * (1.0 - (sigma - s0) / dsig)
             fext = 1.0 - fint
-            q = ts04_dipole(ps, x, y, z)
+            q = dipole(ps, x, y, z; q0 = 30115.0)
             return @. (b + q) * fint + oimf * fext - q
         end
     else
         # Outside magnetosphere
-        oimf .- ts04_dipole(ps, x, y, z)
+        oimf .- dipole(ps, x, y, z; q0 = 30115.0)
     end
-end
-
-function ts04_dipole(ps, x, y, z)
-    return dipole(ps, x, y, z; q0 = 30115.0)
 end

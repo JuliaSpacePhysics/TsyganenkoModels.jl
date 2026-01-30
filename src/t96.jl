@@ -98,4 +98,4 @@ function t96(x, y, z, ps, pdyn, dst, byimf, bzimf)
     return GSM(out)
 end
 
-(m::T96)(x, y, z, ps) = t96(x, y, z, ps, m.pdyn, m.dst, m.byimf, m.bzimf)
+evalmodel(m::T96, x, y, z, ps) = t96(x, y, z, ps, m.pdyn, m.dst, m.byimf, m.bzimf)

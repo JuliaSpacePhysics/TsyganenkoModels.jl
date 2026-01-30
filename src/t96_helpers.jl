@@ -89,8 +89,8 @@ end
 @views function intercon(x, y, z)
     a = INTERCON_A
 
-    p = a[10:12]
-    r = a[13:15]
+    p = NTuple{3}(a[10:12])
+    r = NTuple{3}(a[13:15])
     rp = 1.0 ./ p
     rr = 1.0 ./ r
 
@@ -553,13 +553,14 @@ function birk1tot_02(ps, x, y, z)
         st02as = sqr / (r3 + 1 / sin(t02)^6 - 1)^(1 / 6)
         ct01as = sqrt(1 - st01as^2)
         ct02as = sqrt(1 - st02as^2)
-        xas1 = r * st01as * cos(pas)
-        y1 = r * st01as * sin(pas)
+        sinpas, cospas = sincos(pas)
+        xas1 = r * st01as * cospas
+        y1 = r * st01as * sinpas
         zas1 = r * ct01as
         x1 = xas1 * cpsas + zas1 * spsas
         z1 = -xas1 * spsas + zas1 * cpsas
-        xas2 = r * st02as * cos(pas)
-        y2 = r * st02as * sin(pas)
+        xas2 = r * st02as * cospas
+        y2 = r * st02as * sinpas
         zas2 = r * ct02as
         x2 = xas2 * cpsas + zas2 * spsas
         z2 = -xas2 * spsas + zas2 * cpsas
@@ -575,13 +576,14 @@ function birk1tot_02(ps, x, y, z)
         st02as = sqr / (r3 + 1 / sin(t02)^6 - 1)^(1 / 6)
         ct01as = -sqrt(1 - st01as^2)
         ct02as = -sqrt(1 - st02as^2)
-        xas1 = r * st01as * cos(pas)
-        y1 = r * st01as * sin(pas)
+        sinpas, cospas = sincos(pas)
+        xas1 = r * st01as * cospas
+        y1 = r * st01as * sinpas
         zas1 = r * ct01as
         x1 = xas1 * cpsas + zas1 * spsas
         z1 = -xas1 * spsas + zas1 * cpsas
-        xas2 = r * st02as * cos(pas)
-        y2 = r * st02as * sin(pas)
+        xas2 = r * st02as * cospas
+        y2 = r * st02as * sinpas
         zas2 = r * ct02as
         x2 = xas2 * cpsas + zas2 * spsas
         z2 = -xas2 * spsas + zas2 * cpsas
@@ -858,10 +860,10 @@ function condip1!(d, x, y, z, ps)
 end
 
 @views function birk1shld(ps, x, y, z)
-    p1 = BIRK1_SHLD[65:68]
-    r1 = BIRK1_SHLD[69:72]
-    q1 = BIRK1_SHLD[73:76]
-    s1 = BIRK1_SHLD[77:80]
+    p1 = NTuple{4}(BIRK1_SHLD[65:68])
+    r1 = NTuple{4}(BIRK1_SHLD[69:72])
+    q1 = NTuple{4}(BIRK1_SHLD[73:76])
+    s1 = NTuple{4}(BIRK1_SHLD[77:80])
     rp = 1.0 ./ p1
     rr = 1.0 ./ r1
     rq = 1.0 ./ q1

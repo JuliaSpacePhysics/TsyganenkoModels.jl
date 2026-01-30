@@ -46,7 +46,7 @@ end
 
 # This subroutine returns the shielding field for the earth's dipole, represented by
 # 2x3x3=18 "cartesian" harmonics, tilted with respect to the z=0 plane
-@views function shlcar3x3(x, y, z, ps)
+function shlcar3x3(x, y, z, ps)
     a = SHLCAR_A
     p1, p2, p3 = a[37], a[38], a[39]
     r1, r2, r3 = a[40], a[41], a[42]
@@ -65,35 +65,35 @@ end
     p_arr = (p1, p2, p3)
     r_arr = (r1, r2, r3)
 
-    hx_arr = zeros(9); hy_arr = zeros(9); hz_arr = zeros(9)
+    bx = 0.0
+    by = 0.0
+    bz = 0.0
     idx = 0
-    for pi in p_arr
-        syp, cyp = sincos(y / pi)
+    for p in p_arr
+        syp, cyp = sincos(y / p)
         for (k, rk) in enumerate(r_arr)
             idx += 1
             szr, czr = sincos(z1 / rk)
-            sqpr = sqrt(1.0 / pi^2 + 1.0 / rk^2)
+            sqpr = sqrt(1.0 / p^2 + 1.0 / rk^2)
             expr = exp(sqpr * x1)
             if k < 3
                 fx = -sqpr * expr * cyp * szr
-                hy_arr[idx] = expr / pi * syp * szr
+                hy = expr / p * syp * szr
                 fz = -expr * cyp / rk * czr
             else
                 # Special formula for k=3 (r3)
                 fx = -expr * cyp * (sqpr * z1 * czr + szr / rk * (x1 + 1.0 / sqpr))
-                hy_arr[idx] = expr / pi * syp * (z1 * czr + x1 / rk * szr / sqpr)
+                hy = expr / p * syp * (z1 * czr + x1 / rk * szr / sqpr)
                 fz = -expr * cyp * (czr * (1.0 + x1 / rk^2 / sqpr) - z1 / rk * szr)
             end
-            hx_arr[idx] = fx * ct1 + fz * st1
-            hz_arr[idx] = -fx * st1 + fz * ct1
+            hx = fx * ct1 + fz * st1
+            hz = -fx * st1 + fz * ct1
+            coef = a[2 * idx - 1] + a[2 * idx] * cps
+            bx += coef * hx
+            by += coef * hy
+            bz += coef * hz
         end
     end
-
-    # Combine with coefficients using broadcasting
-    coef_perp = @. a[1:2:17] + a[2:2:18] * cps
-    bx = dot(coef_perp, hx_arr)
-    by = dot(coef_perp, hy_arr)
-    bz = dot(coef_perp, hz_arr)
 
     # Second sum (parallel symmetry) - 9 terms for q1,q2,q3 x s1,s2,s3
     q_arr = (q1, q2, q3)

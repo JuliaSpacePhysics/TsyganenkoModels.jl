@@ -16,7 +16,7 @@ end
     iopt = 2
     B_true = [20.77213175686351, -0.6465547428023687, -15.071641970338984]
     @test T89(iopt)(r_gsm, ps) == B_true
-    @test T89(iopt)(r_gsm, time) ≈ B_true rtol = 1.0e-4
+    @test T89(; iopt)(r_gsm, time) ≈ B_true rtol = 1.0e-4
 
     param = (; pdyn = 2.0, dst = -87.0, byimf = 2.0, bzimf = -5.0)
     result = T96(param)(r_gsm, ps)

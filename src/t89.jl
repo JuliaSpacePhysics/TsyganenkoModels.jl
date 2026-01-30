@@ -48,7 +48,9 @@ function t89(x, y, z, ps, iopt; cache = nothing)
     return GSM(_t89_compute(x, y, z, ps, cache))
 end
 
-(m::T89)(x, y, z, ps) = t89(x, y, z, ps, m.iopt; cache = m.cache)
+function evalmodel(m::T89, r, θ, φ, ps)
+    return t89(r, θ, φ, ps, m.iopt; cache = m.cache)
+end
 
 function t89_init(iopt::Int)
     # Extract parameters for this Kp level
@@ -90,7 +92,6 @@ function t89_init(iopt::Int)
     A6H = AK6 * 0.5
     A9T = AK9 / 3.0
     YNP = 1 / π / YN * 0.5
-    YND = 2.0 * YN
 
     AK610 = AK6 * W1 + AK10 * W5
     AK711 = AK7 * W2 - AK11
@@ -102,9 +103,8 @@ function t89_init(iopt::Int)
         AK1, AK2, AK3, AK4, AK5, AK6, AK7, AK8, AK9, AK10,
         AK11, AK12, AK13, AK14, AK15, AK16, AK17,
         DX, ADR, D0, DD, RC, G, AT, DT, DEL, P, Q, SX, GAM, DYC,
-        HA02, RDX2M, RDX2, RDYC2, HLWC2M, DRDYC2, DRDYC3, HXLW2M,
-        HXLD2M, W1, W2, W3, W4, W5, W6, RDXL, HRDXL,
-        A6H, A9T, YNP, YND, AK610, AK711, AK812, AK913, DYC2,
+        HA02, RDX2M, RDX2, RDYC2, HLWC2M, DRDYC2, DRDYC3, HXLW2M, HXLD2M, RDXL, HRDXL,
+        A6H, A9T, YNP, AK610, AK711, AK812, AK913
     )
 end
 

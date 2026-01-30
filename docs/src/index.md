@@ -114,7 +114,7 @@ Here we verify the result with `igrf_gsm` from `Geopack`.
 using GeoCotrans
 
 b0_py = Geopack.igrf_gsm(xgsm, ygsm, zgsm)
-b0_jl = GeoCotrans.igrf(GSM(𝐫) .* GeoCotrans.R🜨, t)
+b0_jl = GeoCotrans.igrf(GSM(𝐫), t)
 @test b0_jl ≈ b0_py rtol = 1e-5
 @test GeoCotrans.get_igrf_coeffs(t)[1] ≈ Geopack.load_igrf(ut)[1]
 ```
@@ -127,7 +127,7 @@ using Chairmarks
 @b TsyganenkoModels.T96($pdyn, $dst, $byimf, $bzimf)($𝐫, $ps), Geopack.t96([$pdyn, $dst, $byimf, $bzimf, 0, 0], $ps, $𝐫...)
 @b TsyganenkoModels.T01(; pdyn, dst, byimf, bzimf)($𝐫, $ps), Geopack.t01([pdyn, dst, byimf, bzimf, 0, 0], $ps, $𝐫...)
 
-@b GeoCotrans.igrf(GSM($𝐫) .* GeoCotrans.R🜨, t), Geopack.igrf_gsm($𝐫...)
+@b GeoCotrans.igrf(GSM($𝐫), t), Geopack.igrf_gsm($𝐫...)
 ```
 
 ## API

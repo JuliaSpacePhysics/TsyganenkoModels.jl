@@ -3,7 +3,9 @@
 
 Compute GSM components of the external magnetic field [nT] using Tsyganenko model `m`, given position in GSM coordinates (`x, y, z`) [Earth radii] and geodipole tilt angle [radians] `ps`.
 """
-abstract type TsyganenkoModel end
+abstract type TsyganenkoModel <: ExternalFieldModel end
+
+getcsys(::TsyganenkoModel) = (GSM(), Cartesian3())
 
 # Generic model types
 """
@@ -47,6 +49,7 @@ function T89(iopt)
     return T89(iopt, cache)
 end
 
+T89(; iopt) = T89(iopt)
 
 """
     T96(; pdyn, dst, byimf, bzimf)

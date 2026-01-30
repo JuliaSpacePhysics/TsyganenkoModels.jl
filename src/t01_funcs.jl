@@ -7,7 +7,7 @@ function extall(pdyn, dst, byimf, bzimf, g1, g2, ps, x, y, z)
     xx, yy, zz = x * xappa, y * xappa, z * xappa
     sps = sin(ps)
     x0 = A0_X0 / xappa; am = A0_A / xappa; s0 = A0_S0
-    bimf = (0, byimf, bzimf)
+    bimf = (0.0, byimf, bzimf)
 
     theta = (byimf == 0.0 && bzimf == 0.0) ? 0.0 : (t = atan(byimf, bzimf); t <= 0 ? t + 2π : t)
     sthetah = sin(theta / 2.0)^2
