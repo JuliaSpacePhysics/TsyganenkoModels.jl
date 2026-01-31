@@ -13,7 +13,7 @@ function extall(pdyn, dst, byimf, bzimf, g1, g2, ps, x, y, z)
     sthetah = sin(theta / 2.0)^2
     factimf = a[24] + a[25] * sthetah
     oimfy, oimfz = byimf * factimf, bzimf * factimf
-    oimf = (0, oimfy, oimfz)
+    oimf = (0.0, oimfy, oimfz)
 
     r = sqrt(x^2 + y^2 + z^2); xss, zss = x, z
     for _ in 1:20
@@ -29,7 +29,7 @@ function extall(pdyn, dst, byimf, bzimf, g1, g2, ps, x, y, z)
     rho2 = y^2 + zss^2
     sigma = _sigma(xss, x0, am, rho2)
     dsig = 0.003
-    return if sigma < (s0 + dsig)
+    return _switch(sigma, s0, dsig, ps, x, y, z, oimf; q0 = 30115.0) do
         bcf = shlcar3x3(xx, yy, zz, ps)
 
         # Tail
@@ -57,17 +57,6 @@ function extall(pdyn, dst, byimf, bzimf, g1, g2, ps, x, y, z)
         a_prc = a[13] + a[14] * dst + a[15] * sqrt(pdyn)
         a_r11 = a[16] + a[17] * g2; a_r12 = a[18] + a[19] * g2
         a_r21 = a[20] + a[21] * g2; a_r22 = a[22] + a[23] * g2
-
-        b = @. a[1] * xappa3 * bcf + tamp1 * bt1 + tamp2 * bt2 + a_src * bsrc + a_prc * bprc + a_r11 * br11 + a_r12 * br12 + a_r21 * br21 + a_r22 * br22 + factimf * bimf
-        if sigma < (s0 - dsig)
-            return b
-        else
-            fint = 0.5 * (1.0 - (sigma - s0) / dsig)
-            fext = 1.0 - fint
-            q = dipole(ps, x, y, z; q0 = 30115.0)
-            return @. (b + q) * fint + oimf * fext - q
-        end
-    else
-        oimf .- dipole(ps, x, y, z; q0 = 30115.0)
+        @. a[1] * xappa3 * bcf + tamp1 * bt1 + tamp2 * bt2 + a_src * bsrc + a_prc * bprc + a_r11 * br11 + a_r12 * br12 + a_r21 * br21 + a_r22 * br22 + factimf * bimf
     end
 end

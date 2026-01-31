@@ -3,9 +3,7 @@ const PDYN0 = 2.0
 const EPS10 = 3630.7
 const A_COEF = [1.162, 22.344, 18.5, 2.602, 6.903, 5.287, 0.579, 0.4462, 0.785]
 const AM0 = 70.0
-const S0 = 1.08
 const X00 = 5.48
-const DSIG = 0.005
 const DELIMFX = 20.0
 const DELIMFY = 10.0
 

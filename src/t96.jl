@@ -57,17 +57,15 @@ function t96(x, y, z, ps, pdyn, dst, byimf, bzimf)
     oimf = (oimfx, oimfy, oimfz)
 
     rimfampl = reconn * bt
-
-    xx = x * xappa
-    yy = y * xappa
-    zz = z * xappa
-
     x0 = X00 / xappa
     am = AM0 / xappa
     rho2 = y^2 + z^2
     sigma = _sigma(x, x0, am, rho2)
 
-    out = if sigma < (S0 + DSIG)
+    s0 = 1.08
+    dsig = 0.005
+    out = _switch(sigma, s0, dsig, ps, x, y, z, oimf; q0 = 30574) do
+        xx = x * xappa; yy = y * xappa; zz = z * xappa
         cf = dipshld(ps, xx, yy, zz)
         brc, bt2, bt3 = tailrc96(sps, xx, yy, zz)
         r1 = birk1tot_02(ps, xx, yy, zz)
@@ -75,18 +73,8 @@ function t96(x, y, z, ps, pdyn, dst, byimf, bzimf)
         rimfx, rimfys, rimfzs = intercon(xx, ys * xappa, zs * xappa)
         rimfy = rimfys * ct + rimfzs * st
         rimfz = rimfzs * ct - rimfys * st
-        f = @. (rimfx, rimfy, rimfz) * rimfampl + cf * xappa3 + b1ampl * r1 + b2ampl * r2 + rcampl * brc + tampl2 * bt2 + tampl3 * bt3
-
-        if sigma < (S0 - DSIG)
-            f
-        else
-            fint = 0.5 * (1 - (sigma - S0) / DSIG)
-            fext = 1.0 - fint
-            q = dipole(ps, x, y, z)
-            @. (f + q) * fint + oimf * fext - q
-        end
-    else
-        oimf .- dipole(ps, x, y, z)
+        rimf = (rimfx, rimfy, rimfz)
+        @. rimf * rimfampl + cf * xappa3 + b1ampl * r1 + b2ampl * r2 + rcampl * brc + tampl2 * bt2 + tampl3 * bt3
     end
     return GSM(out)
 end
