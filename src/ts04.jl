@@ -41,7 +41,7 @@ function TS04(; pdyn, dst, byimf, bzimf, w1 = 0.0, w2 = 0.0, w3 = 0.0, w4 = 0.0,
 end
 
 module TS04Impl
-    using ..TsyganenkoModels: birk_tot, full_rc, dipole, deformed, shlcar3x3
+    using ..TsyganenkoModels: birk_tot, full_rc, dipole, deformed, shlcar3x3, _sigma
     include("ts04_consts.jl")
     include("ts04_funcs.jl")
 end

@@ -65,14 +65,7 @@ function t96(x, y, z, ps, pdyn, dst, byimf, bzimf)
     x0 = X00 / xappa
     am = AM0 / xappa
     rho2 = y^2 + z^2
-    asq = am^2
-    xmxm = am + x - x0
-    if xmxm < 0
-        xmxm = 0.0
-    end
-    axx0 = xmxm^2
-    aro = asq + rho2
-    sigma = sqrt((aro + axx0 + sqrt((aro + axx0)^2 - 4 * asq * axx0)) / (2 * asq))
+    sigma = _sigma(x, x0, am, rho2)
 
     out = if sigma < (S0 + DSIG)
         cf = dipshld(ps, xx, yy, zz)
@@ -88,7 +81,7 @@ function t96(x, y, z, ps, pdyn, dst, byimf, bzimf)
             f
         else
             fint = 0.5 * (1 - (sigma - S0) / DSIG)
-            fext = 0.5 * (1 + (sigma - S0) / DSIG)
+            fext = 1.0 - fint
             q = dipole(ps, x, y, z)
             @. (f + q) * fint + oimf * fext - q
         end
@@ -96,6 +89,14 @@ function t96(x, y, z, ps, pdyn, dst, byimf, bzimf)
         oimf .- dipole(ps, x, y, z)
     end
     return GSM(out)
+end
+
+function _sigma(x, x0, am, rho2)
+    xmxm = max(am + x - x0, 0.0)
+    asq = am^2
+    aro = asq + rho2
+    axx0 = xmxm^2
+    return sqrt((aro + axx0 + sqrt((aro + axx0)^2 - 4 * asq * axx0)) / (2 * asq))
 end
 
 evalmodel(m::T96, x, y, z, ps) = t96(x, y, z, ps, m.pdyn, m.dst, m.byimf, m.bzimf)

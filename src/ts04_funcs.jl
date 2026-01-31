@@ -35,11 +35,7 @@ function extall(pdyn, dst, byimf, bzimf, w1, w2, w3, w4, w5, w6, ps, x, y, z)
     end
 
     rho2 = y^2 + zss^2
-    asq = am^2
-    xmxm = max(am + xss - x0, 0.0)
-    axx0 = xmxm^2
-    aro = asq + rho2
-    sigma = sqrt((aro + axx0 + sqrt((aro + axx0)^2 - 4.0 * asq * axx0)) / (2.0 * asq))
+    sigma = _sigma(xss, x0, am, rho2)
 
     return if sigma < (s0 + dsig)
         # Dipole shielding field
