@@ -9,6 +9,16 @@ using Chairmarks
     Aqua.test_all(TsyganenkoModels)
 end
 
+@testset "dipole_tilt" begin
+    using Dates
+    using GeoCotrans, Geopack
+    time = DateTime("2015-10-16T00:00:00")
+    ps = TsyganenkoModels.dipole_tilt(time)
+    @test GeoCotrans.dipole_tilt(time) == ps
+    @test Geopack.recalc(time) ≈ ps rtol = 1.0e-4
+end
+
+
 @testset "External magnetic fields" begin
     using Dates
     time = DateTime(2001, 1, 1, 2, 3, 4)
