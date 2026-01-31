@@ -2,5 +2,10 @@
 Aqua = "4c88cf16-eb10-579e-8560-4a9242c79595"
 Chairmarks = "0ca39b1e-fe0b-4e98-acfc-b1656634c4de"
 Dates = "ade2ca70-3891-5945-98fb-dc099432e06a"
+GeoCotrans = "4624b3bc-fe35-44f8-bfa8-722ff9c0e307"
+Geopack = "c09bac50-eda4-48f6-a073-1898932da073"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 TsyganenkoModels = "14dfbe45-703c-4bf3-b096-15691adbb981"
+
+[sources]
+Geopack = {path = "../lib/Geopack.jl"}
