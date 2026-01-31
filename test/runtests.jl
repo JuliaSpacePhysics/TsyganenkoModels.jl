@@ -20,14 +20,21 @@ end
     @test T89(; iopt)(r_gsm, time) ≈ B_true rtol = 1.0e-4
 
     param = (; pdyn = 2.0, dst = -87.0, byimf = 2.0, bzimf = -5.0)
-    result = T96(param)(r_gsm, ps)
-    @test result ≈ [61.17831041891597, -1.4611958991749145, -40.44973158310239]
+    @testset "T96 model test" begin
+        result = T96(param)(r_gsm, ps)
+        @test result ≈ [61.17831041891597, -1.4611958991749145, -40.44973158310239]
+
+        # Test intermediate sigma case (S0 - DSIG < sigma < S0 + DSIG)
+        r = (-6.5, 13, 13.0)
+        @test t96(r, ps, param...) ≈ [10.64621818721388, -0.8896267128450983, 1.9983159012100993]
+    end
 
     # T01 model test (reference from Python geopack.t01)
     result_t01 = T01(param)(r_gsm, ps)
     @test result_t01 ≈ [46.972663449207076, 1.5442350206329172, -31.3541847716317] rtol = 1.0e-6
     @test TS04(param)(r_gsm, ps) ≈ [25.835474201385036, 1.5987724615979861, -18.1054945348421]
 end
+
 
 @testset "Composite magnetic fields" begin
     using Dates

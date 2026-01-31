@@ -36,4 +36,10 @@ using Test
     xgsm, ygsm, zgsm = (-5.1, 0.3, 2.8)
     ps = -0.533585131
     @test Geopack.t04([pdyn, dst, byimf, bzimf, 0, 0, 0, 0, 0, 0, 0], ps, xgsm, ygsm, zgsm) == [25.835474201385036, 1.5987724615979861, -18.1054945348421]
+
+    # Test intermediate sigma case (S0 - DSIG < sigma < S0 + DSIG)
+    r = (-6.5, 13, 13.0)
+    ps = -0.533585131
+    param = (; pdyn = 2.0, dst = -87.0, byimf = 2.0, bzimf = -5.0)
+    @test Geopack.t96(collect(param), ps, r...) == [10.64621818721388, -0.8896267128450983, 1.9983159012100993]
 end
