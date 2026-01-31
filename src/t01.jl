@@ -11,7 +11,7 @@
 #
 
 module T01Impl
-    using ..TsyganenkoModels: birk_tot, full_rc, dipole, deformed, shlcar3x3
+    using ..TsyganenkoModels: birk_tot, full_rc, dipole, deformed, shlcar3x3, _sigma
     include("t01_consts.jl")
     include("t01_funcs.jl")
 end
