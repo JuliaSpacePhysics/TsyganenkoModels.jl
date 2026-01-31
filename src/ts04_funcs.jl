@@ -37,7 +37,7 @@ function extall(pdyn, dst, byimf, bzimf, w1, w2, w3, w4, w5, w6, ps, x, y, z)
     rho2 = y^2 + zss^2
     sigma = _sigma(xss, x0, am, rho2)
 
-    return if sigma < (s0 + dsig)
+    return _switch(sigma, s0, dsig, ps, x, y, z, oimf; q0 = 30115.0) do
         # Dipole shielding field
         bcf = shlcar3x3(xx, yy, zz, ps)
 
@@ -81,22 +81,9 @@ function extall(pdyn, dst, byimf, bzimf, w1, w2, w3, w4, w5, w6, ps, x, y, z)
         a_r21 = a[18] + a[19] * a[44] * w6 / sqrt(w6^2 + a[44]^2)
 
         # T04 only uses r11 and r21 Birkeland terms (not r12 and r22 like T01)
-        b = @. a[1] * xappa3 * bcf + tamp1 * bt1 + tamp2 * bt2 +
+        @. a[1] * xappa3 * bcf + tamp1 * bt1 + tamp2 * bt2 +
             a_src * bsrc + a_prc * bprc +
             a_r11 * br11 + a_r21 * br21 +
             a[20] * bimf
-
-        if sigma < (s0 - dsig)
-            return b
-        else
-            # Interpolation region near magnetopause
-            fint = 0.5 * (1.0 - (sigma - s0) / dsig)
-            fext = 1.0 - fint
-            q = dipole(ps, x, y, z; q0 = 30115.0)
-            return @. (b + q) * fint + oimf * fext - q
-        end
-    else
-        # Outside magnetosphere
-        oimf .- dipole(ps, x, y, z; q0 = 30115.0)
     end
 end
