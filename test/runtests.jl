@@ -9,6 +9,14 @@ using Chairmarks
     Aqua.test_all(TsyganenkoModels)
 end
 
+@testset "dipole_tilt" begin
+    using Dates, GeoCotrans
+    time = DateTime("2015-10-16T00:00:00")
+    ps = TsyganenkoModels.dipole_tilt(time)
+    @test GeoCotrans.dipole_tilt(time) == ps
+end
+
+
 @testset "External magnetic fields" begin
     using Dates
     time = DateTime(2001, 1, 1, 2, 3, 4)
@@ -64,4 +72,39 @@ end
 
     @test TsyganenkoModels.rc_symm(0, 0, 1) == (-0.0, -0.0, -15.875017940770613)
     @test TsyganenkoModels.prc_quad(0, 0, 1) == (-38.33420080986639, 0.0, 0.0)
+end
+
+@testset "Field line tracing" begin
+    using Dates
+    using GeoCotrans
+    using OrdinaryDiffEqTsit5
+
+    # Test case from https://github.com/tsssss/geopack/blob/master/geopack/test_geopack1.md
+    # geopack dir=-1 = parallel to B (geopack sign convention is opposite to GeoCotrans dir=1)
+    time = DateTime(2001, 1, 1, 2, 3, 4)
+    r_gsm = GSM(-5.1, 0.3, 2.8)
+    param = (; pdyn = 2.0, dst = -87.0, byimf = 2.0, bzimf = -5.0)
+
+    # Geopack reference footpoints (parallel to B, r0=1.1 RE, w1-w6=0)
+    # ~1% systematic offset vs geopack expected: geopack uses fixed-step RK4 (ds=0.5 RE, ~8 steps)
+    # compared to our more accurate fully converged Tsit5
+    footpoints = (;
+        T89 = GSM(-0.7169607888154808, 0.03270815651368241, 0.8251160327006916),
+        T96 = GSM(-0.7231220043155986, 0.03524984007351079, 0.818160665907448),
+        T01 = GSM(-0.7206908533178673, 0.039122906017394675, 0.8206093486807777),
+        TS04 = GSM(-0.7147665538572625, 0.035790564238260165, 0.8271336967350074),
+    )
+
+    models = (;
+        T89 = TsyIGRF(T89(iopt = 2)),
+        T96 = TsyIGRF(T96(param)),
+        T01 = TsyIGRF(T01(param)),
+        TS04 = TsyIGRF(TS04(param)),
+    )
+
+    for name in keys(models)
+        sol = trace(r_gsm, time, Tsit5(); model = models[name], dir = 1, r0 = 1.1, rlim = 10.0)
+        footpoint = GSM(sol.u[end]...)
+        @test footpoint ≈ footpoints[name] rtol = 1.0e-2
+    end
 end
