@@ -28,10 +28,11 @@ end
     @test result_t01 ≈ [46.972663449207076, 1.5442350206329172, -31.3541847716317] rtol = 1.0e-6
     @test TS04(param)(r_gsm, ps) ≈ [25.835474201385036, 1.5987724615979861, -18.1054945348421]
 
-    @testset "near magnetopause" begin
+    @testset "near magnetopause and outside magnetosphere" begin
         # intermediate sigma case (S0 - DSIG < sigma < S0 + DSIG)
         @test t96([-6.5, 13, 13.0], ps, param...) ≈ [10.64621818721388, -0.8896267128450983, 1.9983159012100993]
         @test T01(param)([-6.5, 10, 13.0], ps) ≈ [33.90299388160385, -3.7496216888652825, -4.16584515175392] rtol = 1.0e-6
+        @test T01(param)([-6.5, 10, 23.0], ps) == [-0.281726292169127, 3.0187227770015053, -0.45328468009496703]
     end
 end
 
