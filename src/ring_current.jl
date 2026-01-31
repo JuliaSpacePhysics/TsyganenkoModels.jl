@@ -25,22 +25,25 @@ function src_prc(ps, x, y, z, phi, sc_sy, sc_pr)
     return (bxsrc, bysrc, bzsrc), (bxprc, byprc, bzprc)
 end
 
-function rc_symm(x, y, z)
+rc_symm(x, y, z) = _rc_symm(ap_rc, x, y, z)
+
+function _rc_symm(f, x, y, z)
     ds, dc, d, drd = 1.0e-2, 0.99994999875, 1.0e-4, 5.0e3
     rho2 = x^2 + y^2; r2 = rho2 + z^2; r = sqrt(r2)
     rp, rm = r + d, r - d; sint, cost = sqrt(rho2) / r, z / r
-    if sint < ds
-        a = ap_rc(r, ds, dc) / ds
-        dardr = (rp * ap_rc(rp, ds, dc) - rm * ap_rc(rm, ds, dc)) * drd
+    return if sint < ds
+        a = f(r, ds, dc) / ds
+        dardr = (rp * f(rp, ds, dc) - rm * f(rm, ds, dc)) * drd
         fxy = z * (2.0 * a - dardr) / (r * r2)
-        return fxy * x, fxy * y, (2.0 * a * cost^2 + dardr * sint^2) / r
+        fxy * x, fxy * y, (2.0 * a * cost^2 + dardr * sint^2) / r
     else
         theta = atan(sint, cost); tp, tm = theta + d, theta - d
-        sintp, costp, sintm, costm = sin(tp), cos(tp), sin(tm), cos(tm)
-        br = (sintp * ap_rc(r, sintp, costp) - sintm * ap_rc(r, sintm, costm)) / (r * sint) * drd
-        bt = (rm * ap_rc(rm, sint, cost) - rp * ap_rc(rp, sint, cost)) / r * drd
+        sintp, costp = sincos(tp)
+        sintm, costm = sincos(tm)
+        br = (sintp * f(r, sintp, costp) - sintm * f(r, sintm, costm)) / (r * sint) * drd
+        bt = (rm * f(rm, sint, cost) - rp * f(rp, sint, cost)) / r * drd
         fxy = (br + bt * cost / sint) / r
-        return fxy * x, fxy * y, br * cost - bt * sint
+        fxy * x, fxy * y, br * cost - bt * sint
     end
 end
 
@@ -82,24 +85,7 @@ function elliptic_aphi(rrc, rhos, zs, dd)
     return ((1.0 - xk2 * 0.5) * elk - ele) / xkrho12
 end
 
-function prc_symm(x, y, z)
-    ds, dc, d, drd = 1.0e-2, 0.99994999875, 1.0e-4, 5.0e3
-    rho2 = x^2 + y^2; r2 = rho2 + z^2; r = sqrt(r2)
-    rp, rm = r + d, r - d; sint, cost = sqrt(rho2) / r, z / r
-    if sint < ds
-        a = apprc(r, ds, dc) / ds
-        dardr = (rp * apprc(rp, ds, dc) - rm * apprc(rm, ds, dc)) * drd
-        fxy = z * (2.0 * a - dardr) / (r * r2)
-        return fxy * x, fxy * y, (2.0 * a * cost^2 + dardr * sint^2) / r
-    else
-        theta = atan(sint, cost); tp, tm = theta + d, theta - d
-        sintp, costp, sintm, costm = sin(tp), cos(tp), sin(tm), cos(tm)
-        br = (sintp * apprc(r, sintp, costp) - sintm * apprc(r, sintm, costm)) / (r * sint) * drd
-        bt = (rm * apprc(rm, sint, cost) - rp * apprc(rp, sint, cost)) / r * drd
-        fxy = (br + bt * cost / sint) / r
-        return fxy * x, fxy * y, br * cost - bt * sint
-    end
-end
+prc_symm(x, y, z) = _rc_symm(apprc, x, y, z)
 
 function apprc(r, sint, cost)
     a1, a2 = -80.11202281, 12.58246758

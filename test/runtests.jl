@@ -60,4 +60,7 @@ end
 
     ps = -0.46049650108726486
     @test collect(TsyganenkoModels.shlcar3x3(1, 2, 3, ps)) ≈ [-6.624367426893622, 0.5530405783442072, 19.261862546642284]
+
+    @test TsyganenkoModels.rc_symm(0, 0, 1) == (-0.0, -0.0, -15.875017940770613)
+    @test TsyganenkoModels.prc_quad(0, 0, 1) == (-38.33420080986639, 0.0, 0.0)
 end
