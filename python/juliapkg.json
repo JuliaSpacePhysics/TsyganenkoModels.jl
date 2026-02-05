@@ -1,0 +1,8 @@
+{
+  "julia": "1.10",
+  "packages": {
+    "TsyganenkoModels": {
+      "uuid": "14dfbe45-703c-4bf3-b096-15691adbb981"
+    }
+  }
+}

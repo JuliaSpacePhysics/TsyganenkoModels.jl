@@ -6,3 +6,7 @@ Manifest*.toml
 /docs/build/
 .CondaPkg
 geopack
+
+__pycache__
+pixi.lock
+python/dist
