@@ -4,6 +4,9 @@ CurrentModule = TsyganenkoModels
 
 # TsyganenkoModels
 
+[![DOI](https://zenodo.org/badge/1139356853.svg)](https://doi.org/10.5281/zenodo.18435633)
+[![version](https://juliahub.com/docs/General/TsyganenkoModels/stable/version.svg)](https://juliahub.com/ui/Packages/General/TsyganenkoModels)
+
 Modeling of Earth's Magnetosphere Using Spacecraft Magnetometer Data.
 
 ## Features
