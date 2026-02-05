@@ -1,0 +1,56 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "tsyganenko"
+version = "0.1.0"
+description = "Python wrapper for TsyganenkoModels.jl - Empirical magnetospheric magnetic field models"
+readme = "README.md"
+license = "MIT"
+authors = [
+    { name = "Beforerr", email = "zzj956959688@gmail.com" },
+]
+keywords = [
+    "magnetosphere",
+    "magnetic field",
+    "space physics",
+    "tsyganenko",
+    "geomagnetism",
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Physics",
+]
+requires-python = ">=3.9"
+dependencies = [
+    "numpy>=1.20",
+    "juliacall>=0.9.14",
+]
+
+[project.optional-dependencies]
+test = [
+    "pytest>=7.0",
+    "pytest-cov>=4.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/JuliaSpacePhysics/TsyganenkoModels.jl"
+Repository = "https://github.com/JuliaSpacePhysics/TsyganenkoModels.jl"
+Documentation = "https://github.com/JuliaSpacePhysics/TsyganenkoModels.jl#readme"
+
+[tool.hatch.build.targets.wheel]
+packages = ["tsyganenko"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+addopts = "-v"
