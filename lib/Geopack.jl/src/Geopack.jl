@@ -3,12 +3,15 @@ module Geopack
 using PythonCall
 using PythonCall: pynew, pyimport
 using StaticArrays: SVector
+using Dates: AbstractTime, datetime2unix
 
 const geopack = pynew()
 
 function recalc(ut)
     return _float((@pyconst pyimport("geopack.geopack").recalc)(ut))
 end
+
+recalc(time::AbstractTime) = recalc(datetime2unix(time))
 
 _tuple(x) = pyconvert(Tuple, x)
 _float(x) = pyconvert(Float64, x)
