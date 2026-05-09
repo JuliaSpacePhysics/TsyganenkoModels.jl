@@ -69,7 +69,7 @@ function shlcar3x3(x, y, z, ps)
     by = 0.0
     bz = 0.0
     idx = 0
-    for p in p_arr
+    @inbounds for p in p_arr
         syp, cyp = sincos(y / p)
         for (k, rk) in enumerate(r_arr)
             idx += 1
@@ -100,7 +100,7 @@ function shlcar3x3(x, y, z, ps)
     s_arr = (s1, s2, s3)
 
     idx = 0
-    for qi in q_arr
+    @inbounds for qi in q_arr
         syq, cyq = sincos(y / qi)
         for sk in s_arr
             idx += 1

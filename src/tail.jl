@@ -137,7 +137,7 @@ function taildisk(d0, deltadx, deltady, x, y, z)
     ddzetadz = z / dzeta
 
     dbx, dby, dbz = 0.0, 0.0, 0.0
-    for i in 1:5
+    @inbounds for i in 1:5
         bi, ci = TAIL_B[i], TAIL_C[i]
         s1 = sqrt((rho + bi)^2 + (dzeta + ci)^2)
         s2 = sqrt((rho - bi)^2 + (dzeta + ci)^2)
@@ -168,7 +168,7 @@ end
 function shlcar5x5(a, x, y, z, dshift)
     dhx, dhy, dhz = 0.0, 0.0, 0.0
     l = 0
-    for i in 1:5
+    @inbounds for i in 1:5
         rp = 1.0 / a[50 + i]
         sypi, cypi = sincos(y * rp)
         for k in 1:5

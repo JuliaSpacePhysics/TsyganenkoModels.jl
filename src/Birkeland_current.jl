@@ -111,14 +111,14 @@ function one_cone(a, x, y, z, mode, dtheta)
     return a[1] * (be * cf - bphi * sf), a[1] * (be * sf + bphi * cf), a[1] * (br * c - btheta * s)
 end
 
-function r_s(a, r, theta)
+@fastmath function r_s(a, r, theta)
     cost, cos2t = cos(theta), cos(2.0 * theta)
     return r + a[2] / r + a[3] * r / sqrt(r^2 + a[11]^2) + a[4] * r / (r^2 + a[12]^2) +
         (a[5] + a[6] / r + a[7] * r / sqrt(r^2 + a[13]^2) + a[8] * r / (r^2 + a[14]^2)) * cost +
         (a[9] * r / sqrt(r^2 + a[15]^2) + a[10] * r / (r^2 + a[16]^2)^2) * cos2t
 end
 
-function theta_s(a, r, theta)
+@fastmath function theta_s(a, r, theta)
     sint, sin2t, sin3t = sin(theta), sin(2.0 * theta), sin(3.0 * theta)
     return theta + (a[17] + a[18] / r + a[19] / r^2 + a[20] * r / sqrt(r^2 + a[27]^2)) * sint +
         (a[21] + a[22] * r / sqrt(r^2 + a[28]^2) + a[23] * r / (r^2 + a[29]^2)) * sin2t +
@@ -197,7 +197,7 @@ function birk_shl(a, ps, x_sc, x, y, z)
 
     bx, by, bz = 0.0, 0.0, 0.0
     l = 0
-    for m in 1:2
+    @inbounds for m in 1:2
         for i in 1:3
             p, q = a[72 + i], a[78 + i]
             sypi, cypi = sincos(y / p)
