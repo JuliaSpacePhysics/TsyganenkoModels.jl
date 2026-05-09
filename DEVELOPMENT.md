@@ -2,7 +2,7 @@
 
 ## TS04 vs T01 Comparison
 
-TS04 is an evolution of T01 with improved storm-time dynamics.
+TS04 supersedes T01 with improved storm-time dynamics.
 Many sub-functions are identical and shared: birk_tot, full_rc, dipole,
 deformed, shlcar3x3, warped, unwarped, taildisk, shlcar5x5.
 Key Differences:
@@ -28,4 +28,3 @@ T01:  tamp1 = a[2] + a[3]*dlp1 + a[4]*g1 + a[5]*dst
 TS04: tamp1 = a[2] + a[3]*dlp1 + a[4]*a[39]*w1/√(w1²+a[39]²) + a[5]*dst
 The w-index terms use saturation functions: a*w/√(w²+a²) → 1 as w→∞
 This captures the nonlinear magnetospheric response to prolonged driving.
-#
