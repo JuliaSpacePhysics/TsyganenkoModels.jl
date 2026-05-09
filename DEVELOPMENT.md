@@ -73,8 +73,6 @@ fialcos loop is always 1 or 2 iterations (n = mode ∈ {1, 2}) — the loop body
 
 Missing @inbounds on all the inner accumulation loops (taildisk, shlcar5x5, rc_shield, birk_shl, shlcar3x3). Arrays are fixed-size constants so bounds checks are pure waste.
 
-Missing @fastmath on pure numerical kernels like ap_rc, apprc, br_prc_q, bt_prc_q, r_s, theta_s. No special values, no IEEE requirements — would unlock FMA and reassociation.
-
 sincos underuse: prc_quad:138 does sin(tp), cos(tp), sin(tm), cos(tm) separately (inconsistent with line 130 which uses sincos). one_cone:92-95 does the same. fialcos calls tan(tetanp*0.5) and tan(tetanm*0.5) without sincos.
 
 Bumper.jl used only in t96_helpers.jl (3 spots: birk1tot_02 and r2inner). The T01/TS04 hot paths don't use it — they happen to avoid allocations by returning scalar tuples, which is good but accidental.
@@ -107,10 +105,6 @@ apprc:107-108 — two lines of chained arithmetic longer than the screen. Each c
 │ Performance │ one_cone 4 FD evals → ForwardDiff         │ ~2–4× for Birkeland      │
 ├─────────────┼───────────────────────────────────────────┼──────────────────────────┤
 │ Performance │ prc_quad 6 FD evals → ForwardDiff         │ ~2× for PRC quadrupole   │
-├─────────────┼───────────────────────────────────────────┼──────────────────────────┤
-│ Performance │ Missing @inbounds on inner loops          │ ~5–15%                   │
-├─────────────┼───────────────────────────────────────────┼──────────────────────────┤
-│ Performance │ Missing @fastmath on kernels              │ ~10–20%                  │
 ├─────────────┼───────────────────────────────────────────┼──────────────────────────┤
 │ Performance │ sincos half-used                          │ minor                    │
 ├─────────────┼───────────────────────────────────────────┼──────────────────────────┤
