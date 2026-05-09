@@ -167,7 +167,6 @@ end
 
 function shlcar5x5(a, x, y, z, dshift)
     dhx, dhy, dhz = 0.0, 0.0, 0.0
-    l = 0
     @inbounds for i in 1:5
         rp = 1.0 / a[50 + i]
         sypi, cypi = sincos(y * rp)
@@ -179,7 +178,7 @@ function shlcar5x5(a, x, y, z, dshift)
             dbx = -sqpr * epr * cypi * szrk
             dby = rp * epr * sypi * szrk
             dbz = -rr * epr * cypi * czrk
-            l += 1
+            l = 5 * (i - 1) + k
             coef = a[2 * l - 1] + a[2 * l] * dshift
             dhx += coef * dbx
             dhy += coef * dby
