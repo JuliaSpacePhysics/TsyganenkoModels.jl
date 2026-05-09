@@ -27,6 +27,20 @@ end
 
 rc_symm(x, y, z) = _rc_symm(ap_rc, x, y, z)
 
+# Cardano root-finding + elliptic-integral vector potential, shared by ap_rc / apprc.
+# gammas = (possibly distorted) cos(θ)/r² coordinate used for both the solve and rho/z.
+@fastmath function _vector_potential(alpha_s, gammas, a1, rrc1, dd1, a2, rrc2, dd2)
+    gammas2 = gammas^2; alsqh = alpha_s^2 / 2.0
+    f = 64.0 / 27.0 * gammas2 + alsqh^2
+    q = (sqrt(f) + alsqh)^(1.0 / 3.0)
+    c = max(q - 4.0 * gammas2^(1.0 / 3.0) / (3.0 * q), 0.0)
+    g = sqrt(c^2 + 4.0 * gammas2^(1.0 / 3.0))
+    rs = 4.0 / ((sqrt(2.0 * g - c) + sqrt(c)) * (g + c))
+    costs, sints = gammas * rs^2, sqrt(1.0 - (gammas * rs^2)^2)
+    rhos, zs = rs * sints, rs * costs
+    return a1 * elliptic_aphi(rrc1, rhos, zs, dd1) + a2 * elliptic_aphi(rrc2, rhos, zs, dd2)
+end
+
 function _rc_symm(f, x, y, z)
     ds, dc, d, drd = 1.0e-2, 0.99994999875, 1.0e-4, 5.0e3
     rho2 = x^2 + y^2; r2 = rho2 + z^2; r = sqrt(r2)
@@ -65,15 +79,7 @@ end
     dexp2 = arg2 < -500.0 ? 0.0 : exp(arg2)
     dexp3 = arg3 < -500.0 ? 0.0 : exp(arg3)
     alpha_s = alpha * (1.0 + p1 * dexp1 + p2 * dexp2 + p3 * dexp3)
-    gammas2 = gamma^2; alsqh = alpha_s^2 / 2.0
-    f = 64.0 / 27.0 * gammas2 + alsqh^2
-    q = (sqrt(f) + alsqh)^(1.0 / 3.0)
-    c = max(q - 4.0 * gammas2^(1.0 / 3.0) / (3.0 * q), 0.0)
-    g = sqrt(c^2 + 4.0 * gammas2^(1.0 / 3.0))
-    rs = 4.0 / ((sqrt(2.0 * g - c) + sqrt(c)) * (g + c))
-    costs, sints = gamma * rs^2, sqrt(1.0 - (gamma * rs^2)^2)
-    rhos, zs = rs * sints, rs * costs
-    ap = a1 * elliptic_aphi(rrc1, rhos, zs, dd1) + a2 * elliptic_aphi(rrc2, rhos, zs, dd2)
+    ap = _vector_potential(alpha_s, gamma, a1, rrc1, dd1, a2, rrc2, dd2)
     return prox ? ap * sint / sint1 : ap
 end
 
@@ -104,17 +110,14 @@ prc_symm(x, y, z) = _rc_symm(apprc, x, y, z)
     arg2 = -((alpha - alpha4) / dal4)^2 - (gamma / dg4)^2
     dexp1 = arg1 < -500.0 ? 0.0 : exp(arg1)
     dexp2 = arg2 < -500.0 ? 0.0 : exp(arg2)
-    alpha_s = alpha * (1.0 + p1 / (1.0 + ((alpha - alpha1) / dal1)^2)^beta1 * dexp1 + p2 * (alpha - alpha2) / (1.0 + ((alpha - alpha2) / dal2)^2)^beta2 / (1.0 + (gamma / dg2)^2)^beta3 + p3 * (alpha - alpha3)^2 / (1.0 + ((alpha - alpha3) / dal3)^2)^beta4 / (1.0 + (gamma / dg3)^2)^beta5)
-    gamma_s = gamma * (1.0 + q0 + q1 * (alpha - alpha4) * dexp2 + q2 * (alpha - alpha5) / (1.0 + ((alpha - alpha5) / dal5)^2)^beta6 / (1.0 + (gamma / dg5)^2)^beta7)
-    gammas2 = gamma_s^2; alsqh = alpha_s^2 / 2.0
-    f = 64.0 / 27.0 * gammas2 + alsqh^2
-    q_val = (sqrt(f) + alsqh)^(1.0 / 3.0)
-    c = max(q_val - 4.0 * gammas2^(1.0 / 3.0) / (3.0 * q_val), 0.0)
-    g = sqrt(c^2 + 4.0 * gammas2^(1.0 / 3.0))
-    rs = 4.0 / ((sqrt(2.0 * g - c) + sqrt(c)) * (g + c))
-    costs, sints = gamma_s * rs^2, sqrt(1.0 - (gamma_s * rs^2)^2)
-    rhos, zs = rs * sints, rs * costs
-    ap = a1 * elliptic_aphi(rrc1, rhos, zs, dd1) + a2 * elliptic_aphi(rrc2, rhos, zs, dd2)
+    alpha_s = alpha * (1.0
+        + p1 / (1.0 + ((alpha - alpha1) / dal1)^2)^beta1 * dexp1
+        + p2 * (alpha - alpha2) / (1.0 + ((alpha - alpha2) / dal2)^2)^beta2 / (1.0 + (gamma / dg2)^2)^beta3
+        + p3 * (alpha - alpha3)^2 / (1.0 + ((alpha - alpha3) / dal3)^2)^beta4 / (1.0 + (gamma / dg3)^2)^beta5)
+    gamma_s = gamma * (1.0 + q0
+        + q1 * (alpha - alpha4) * dexp2
+        + q2 * (alpha - alpha5) / (1.0 + ((alpha - alpha5) / dal5)^2)^beta6 / (1.0 + (gamma / dg5)^2)^beta7)
+    ap = _vector_potential(alpha_s, gamma_s, a1, rrc1, dd1, a2, rrc2, dd2)
     return prox ? ap * sint / sint1 : ap
 end
 
