@@ -27,6 +27,10 @@ end
 
 rc_symm(x, y, z) = _rc_symm(ap_rc, x, y, z)
 
+@inline function _pole_floor(sint, cost)
+    return sint < 1.0e-2 ? (1.0e-2, 0.99994999875, sint / 1.0e-2) : (sint, cost, 1.0)
+end
+
 # Cardano root-finding + elliptic-integral vector potential, shared by ap_rc / apprc.
 # gammas = (possibly distorted) cos(θ)/r² coordinate used for both the solve and rho/z.
 @fastmath function _vector_potential(alpha_s, gammas, a1, rrc1, dd1, a2, rrc2, dd2)
@@ -67,10 +71,7 @@ end
     p1, r1, dr1, dla1 = -0.2291904607, 3.74606474, 1.508802177, 0.5873525737
     p2, r2, dr2, dla2 = 0.1556236119, 4.993638842, 3.324180497, 0.4368407663
     p3, r3, dr3 = 0.1855957207, 2.969226745, 2.243367377
-    prox = false; sint1, cost1 = sint, cost
-    if sint1 < 1.0e-2
-        sint1, cost1, prox = 1.0e-2, 0.99994999875, true
-    end
+    sint1, cost1, prox = _pole_floor(sint, cost)
     alpha, gamma = sint1^2 / r, cost1 / r^2
     arg1 = -((r - r1) / dr1)^2 - (cost1 / dla1)^2
     arg2 = -((r - r2) / dr2)^2 - (cost1 / dla2)^2
@@ -80,7 +81,7 @@ end
     dexp3 = arg3 < -500.0 ? 0.0 : exp(arg3)
     alpha_s = alpha * (1.0 + p1 * dexp1 + p2 * dexp2 + p3 * dexp3)
     ap = _vector_potential(alpha_s, gamma, a1, rrc1, dd1, a2, rrc2, dd2)
-    return prox ? ap * sint / sint1 : ap
+    return ap * prox
 end
 
 function elliptic_aphi(rrc, rhos, zs, dd)
@@ -101,10 +102,7 @@ prc_symm(x, y, z) = _rc_symm(apprc, x, y, z)
     p3, alpha3, dal3, beta4, dg3, beta5 = 103.1601001, -0.00764731187, 0.1046487459, 2.958863546, 0.01172314188, 0.4382872938
     q0, q1, alpha4, dal4, dg4 = 0.0113490815, 14.51339943, 0.2647095287, 0.07091230197, 0.01512963586
     q2, alpha5, dal5, dg5, beta6, beta7 = 6.861329631, 0.1677400816, 0.04433648846, 0.05553741389, 0.7665599464, 0.7277854652
-    prox = false; sint1, cost1 = sint, cost
-    if sint1 < 1.0e-2
-        sint1, cost1, prox = 1.0e-2, 0.99994999875, true
-    end
+    sint1, cost1, prox = _pole_floor(sint, cost)
     alpha, gamma = sint1^2 / r, cost1 / r^2
     arg1 = -(gamma / dg1)^2
     arg2 = -((alpha - alpha4) / dal4)^2 - (gamma / dg4)^2
@@ -118,7 +116,7 @@ prc_symm(x, y, z) = _rc_symm(apprc, x, y, z)
         + q1 * (alpha - alpha4) * dexp2
         + q2 * (alpha - alpha5) / (1.0 + ((alpha - alpha5) / dal5)^2)^beta6 / (1.0 + (gamma / dg5)^2)^beta7)
     ap = _vector_potential(alpha_s, gamma_s, a1, rrc1, dd1, a2, rrc2, dd2)
-    return prox ? ap * sint / sint1 : ap
+    return ap * prox
 end
 
 function prc_quad(x, y, z)
