@@ -68,11 +68,10 @@ function shlcar3x3(x, y, z, ps)
     bx = 0.0
     by = 0.0
     bz = 0.0
-    idx = 0
-    @inbounds for p in p_arr
+    @inbounds for (i, p) in enumerate(p_arr)
         syp, cyp = sincos(y / p)
         for (k, rk) in enumerate(r_arr)
-            idx += 1
+            idx = 3 * (i - 1) + k
             szr, czr = sincos(z1 / rk)
             sqpr = sqrt(1.0 / p^2 + 1.0 / rk^2)
             expr = exp(sqpr * x1)
@@ -99,11 +98,10 @@ function shlcar3x3(x, y, z, ps)
     q_arr = (q1, q2, q3)
     s_arr = (s1, s2, s3)
 
-    idx = 0
-    @inbounds for qi in q_arr
+    @inbounds for (i, qi) in enumerate(q_arr)
         syq, cyq = sincos(y / qi)
-        for sk in s_arr
-            idx += 1
+        for (k, sk) in enumerate(s_arr)
+            idx = 3 * (i - 1) + k
             szs, czs = sincos(z2 / sk)
             sqqs = sqrt(1.0 / qi^2 + 1.0 / sk^2)
             exqs = exp(sqqs * x2)

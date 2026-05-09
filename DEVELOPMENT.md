@@ -83,7 +83,7 @@ l counter anti-pattern in all four shielding functions:
 l = 0
 for ...
     l += 1; bx += a[l] * ...
-If loop order ever changes, all indices silently shift. Also blocks @inbounds. Direct flat-index arithmetic (e.g. a[(mes the layout auditable against the original Fortran and is @inbounds-safe.
+If loop order ever changes, all indices silently shift.
 
 shlcar3x3 has a silent special case at k=3 (lines 83–88 of dipole.jl) using a different basis formula with no comment ferent type of harmonic basis function — worth one line.
 
