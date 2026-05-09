@@ -37,9 +37,9 @@ function birk_1n2(numb, mode, ps, x, y, z, xkappa)
     r1rh = (rsc - 1.0) / rh
     psias = beta * ps / (1.0 + r1rh^eps)^(1.0 / eps)
 
-    phis = phi - brack * sin(phi) - psias
-    dphisphi = 1.0 - brack * cos(phi)
-    dphisrho = -2.0 * b_param * rho2 * rho / (rho2 + rho^2)^2 * sin(phi) + beta * ps * r1rh^(eps - 1) * rho / (rh * rsc * (1.0 + r1rh^eps)^(1.0 / eps + 1))
+    phis = phi - brack * sphic - psias
+    dphisphi = 1.0 - brack * cphic
+    dphisrho = -2.0 * b_param * rho2 * rho / (rho2 + rho^2)^2 * sphic + beta * ps * r1rh^(eps - 1) * rho / (rh * rsc * (1.0 + r1rh^eps)^(1.0 / eps + 1))
     dphisdy = beta * ps * r1rh^(eps - 1) * ysc / (rh * rsc * (1.0 + r1rh^eps)^(1.0 / eps + 1))
 
     sphics, cphics = sincos(phis)
@@ -187,7 +187,6 @@ function fialcos(r, theta, phi, n, theta0, dt)
 end
 
 birk_shl(a, ps, x_sc, x, y, z) = _harmonic_shield(a, ps, x_sc, x, y, z, 1.0)
-
 
 
 # Birkeland current shield coefficients
