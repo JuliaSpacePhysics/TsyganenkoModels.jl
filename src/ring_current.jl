@@ -120,32 +120,39 @@ prc_symm(x, y, z) = _rc_symm(apprc, x, y, z)
 end
 
 function prc_quad(x, y, z)
-    d, dd, ds, dc = 1.0e-4, 2.0e-4, 1.0e-2, 0.99994999875
+    ds, dc = 1.0e-2, 0.99994999875
     rho2 = x^2 + y^2; r = sqrt(rho2 + z^2); rho = sqrt(rho2)
-    sint, cost = rho / r, z / r; rp, rm = r + d, r - d
+    sint, cost = rho / r, z / r
     if sint > ds
         cphi, sphi = x / rho, y / rho
         br, bt = br_prc_q(r, sint, cost), bt_prc_q(r, sint, cost)
-        dbrr = (br_prc_q(rp, sint, cost) - br_prc_q(rm, sint, cost)) / dd
-        theta = atan(sint, cost); tp, tm = theta + d, theta - d
-        sintp, costp = sincos(tp); sintm, costm = sincos(tm)
-        dbtt = (bt_prc_q(r, sintp, costp) - bt_prc_q(r, sintm, costm)) / dd
+        dbrr = _r_derivative(br_prc_q, r, sint, cost)
+        dbtt = _theta_derivative(bt_prc_q, r, atan(sint, cost))
         bx = sint * (br + (br + r * dbrr + dbtt) * sphi^2) + cost * bt
         by = -sint * sphi * cphi * (br + r * dbrr + dbtt)
         bz = (br * cost - bt * sint) * cphi
     else
         st, ct = ds, z < 0.0 ? -dc : dc
-        theta = atan(st, ct); tp, tm = theta + d, theta - d
-        sintp, costp = sincos(tp); sintm, costm = sincos(tm)
         br, bt = br_prc_q(r, st, ct), bt_prc_q(r, st, ct)
-        dbrr = (br_prc_q(rp, st, ct) - br_prc_q(rm, st, ct)) / dd
-        dbtt = (bt_prc_q(r, sintp, costp) - bt_prc_q(r, sintm, costm)) / dd
+        dbrr = _r_derivative(br_prc_q, r, st, ct)
+        dbtt = _theta_derivative(bt_prc_q, r, atan(st, ct))
         fcxy = r * dbrr + dbtt
         bx = (br * (x^2 + 2.0 * y^2) + fcxy * y^2) / (r * st)^2 + bt * cost
         by = -(br + fcxy) * x * y / (r * st)^2
         bz = (br * cost / st - bt) * x / r
     end
     return bx, by, bz
+end
+
+function _r_derivative(f, r, sint, cost)
+    rd = ForwardDiff.Dual(r, one(r))
+    return ForwardDiff.partials(f(rd, sint, cost))[1]
+end
+
+function _theta_derivative(f, r, theta)
+    thetad = ForwardDiff.Dual(theta, one(theta))
+    sint, cost = sincos(thetad)
+    return ForwardDiff.partials(f(r, sint, cost))[1]
 end
 
 @fastmath function ffs(a, a0, da)
