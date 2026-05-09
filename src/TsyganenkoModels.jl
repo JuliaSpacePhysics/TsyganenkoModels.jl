@@ -1,6 +1,7 @@
 module TsyganenkoModels
 
 using Dates: AbstractTime
+using ForwardDiff
 using GeoCotrans
 using GeoCotrans: ExternalFieldModel, CompositeFieldModel, GSM, Cartesian3
 import GeoCotrans: evalmodel, getcsys, evaluate_model

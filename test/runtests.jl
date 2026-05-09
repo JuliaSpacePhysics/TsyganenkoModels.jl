@@ -72,6 +72,24 @@ end
 
     @test collect(TsyganenkoModels.rc_symm(0, 0, 1)) ≈ [0.0, 0.0, -15.875017940770613] rtol=1e-6
     @test collect(TsyganenkoModels.prc_quad(0, 0, 1)) ≈ [-38.33420080986639, 0.0, 0.0] rtol=1e-6
+    @test collect(TsyganenkoModels.prc_quad(1.2, 2.3, -0.7)) ≈ [-1.21694699199079, 0.9252304621889801, 3.015319384539304] rtol=1e-6
+    @test collect(TsyganenkoModels.prc_quad(1.0e-4, 2.0e-4, 1.0)) ≈ [-38.33438164853251, 0.00012452474248375253, 0.005149068817611634] rtol=1e-6
+
+    function fd_deformation_jacobian(a, r, theta)
+        dr, dt = 1.0e-6, 1.0e-6
+        rs = TsyganenkoModels.r_s(a, r, theta)
+        thetas = TsyganenkoModels.theta_s(a, r, theta)
+        drsdr = (TsyganenkoModels.r_s(a, r + dr, theta) - TsyganenkoModels.r_s(a, r - dr, theta)) / (2.0 * dr)
+        drsdt = (TsyganenkoModels.r_s(a, r, theta + dt) - TsyganenkoModels.r_s(a, r, theta - dt)) / (2.0 * dt)
+        dtsdr = (TsyganenkoModels.theta_s(a, r + dr, theta) - TsyganenkoModels.theta_s(a, r - dr, theta)) / (2.0 * dr)
+        dtsdt = (TsyganenkoModels.theta_s(a, r, theta + dt) - TsyganenkoModels.theta_s(a, r, theta - dt)) / (2.0 * dt)
+        return rs, thetas, drsdr, drsdt, dtsdr, dtsdt
+    end
+    for a in (TsyganenkoModels.A11, TsyganenkoModels.A12, TsyganenkoModels.A21, TsyganenkoModels.A22)
+        for (r, theta) in ((2.7, 1.2), (8.4, 0.35))
+            @test collect(TsyganenkoModels._deformation_jacobian(a, r, theta)) ≈ collect(fd_deformation_jacobian(a, r, theta)) rtol=1e-6
+        end
+    end
 end
 
 @testset "Field line tracing" begin
