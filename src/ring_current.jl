@@ -200,8 +200,7 @@ end
     return sum(a .* (d1, d2, d3, d4, d5, d6, d7, d8, d9, d10, d11, d12, d13, d14, d15, d16, d17))
 end
 
-function rc_shield(a, ps, x_sc, x, y, z)
-    fac_sc = (x_sc + 1.0)^3
+function _harmonic_shield(a, ps, x_sc, x, y, z, scale)
     sps, cps = sincos(ps)
     s3ps = 2.0 * cps
     pst1, pst2 = ps * a[85], ps * a[86]
@@ -209,7 +208,7 @@ function rc_shield(a, ps, x_sc, x, y, z)
     st2, ct2 = sincos(pst2)
     x1, z1 = x * ct1 - z * st1, x * st1 + z * ct1
     x2, z2 = x * ct2 - z * st2, x * st2 + z * ct2
-    bx, by, bz = 0.0, 0.0, 0.0; l = 0
+    bx, by, bz = 0.0, 0.0, 0.0
     @inbounds for m in 1:2, i in 1:3
         p, q = a[72 + i], a[78 + i]
         sypi, cypi = sincos(y / p)
@@ -222,25 +221,30 @@ function rc_shield(a, ps, x_sc, x, y, z)
             epr, eqs = exp(x1 * sqpr), exp(x2 * sqqs)
             for n in 1:2, nn in 1:2
                 if m == 1
-                    fx = -sqpr * epr * cypi * szrk * fac_sc
-                    fy = epr * sypi * szrk / p * fac_sc
-                    fz = -epr * cypi * czrk / r * fac_sc
+                    fx = -sqpr * epr * cypi * szrk * scale
+                    fy = epr * sypi * szrk / p * scale
+                    fz = -epr * cypi * czrk / r * scale
                     mult = n == 1 ? (nn == 1 ? 1.0 : x_sc) : (nn == 1 ? cps : cps * x_sc)
                 else
-                    fx = -sps * sqqs * eqs * cyqi * czsk * fac_sc
-                    fy = sps / q * eqs * syqi * czsk * fac_sc
-                    fz = sps / s * eqs * cyqi * szsk * fac_sc
+                    fx = -sps * sqqs * eqs * cyqi * czsk * scale
+                    fy = sps / q * eqs * syqi * czsk * scale
+                    fz = sps / s * eqs * cyqi * szsk * scale
                     mult = n == 1 ? (nn == 1 ? 1.0 : x_sc) : (nn == 1 ? s3ps : s3ps * x_sc)
                 end
                 hx, hy, hz = fx * mult, fy * mult, fz * mult
                 ct, st = m == 1 ? (ct1, st1) : (ct2, st2)
                 hxr, hzr = hx * ct + hz * st, -hx * st + hz * ct
-                l += 1; bx += hxr * a[l]; by += hy * a[l]; bz += hzr * a[l]
+                coef_idx = (((m - 1) * 3 + (i - 1)) * 3 + (k - 1)) * 4 + (n - 1) * 2 + nn
+                bx += hxr * a[coef_idx]
+                by += hy * a[coef_idx]
+                bz += hzr * a[coef_idx]
             end
         end
     end
     return bx, by, bz
 end
+
+rc_shield(a, ps, x_sc, x, y, z) = _harmonic_shield(a, ps, x_sc, x, y, z, (x_sc + 1.0)^3)
 
 
 # Ring current coefficients

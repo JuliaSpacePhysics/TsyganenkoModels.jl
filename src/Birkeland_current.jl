@@ -186,65 +186,7 @@ function fialcos(r, theta, phi, n, theta0, dt)
     return btheta, bphi
 end
 
-function birk_shl(a, ps, x_sc, x, y, z)
-    sps, cps = sincos(ps)
-    s3ps = 2.0 * cps
-    pst1, pst2 = ps * a[85], ps * a[86]
-    st1, ct1 = sincos(pst1)
-    st2, ct2 = sincos(pst2)
-    x1, z1 = x * ct1 - z * st1, x * st1 + z * ct1
-    x2, z2 = x * ct2 - z * st2, x * st2 + z * ct2
-
-    bx, by, bz = 0.0, 0.0, 0.0
-    l = 0
-    @inbounds for m in 1:2
-        for i in 1:3
-            p, q = a[72 + i], a[78 + i]
-            sypi, cypi = sincos(y / p)
-            syqi, cyqi = sincos(y / q)
-            for k in 1:3
-                r, s = a[75 + k], a[81 + k]
-                szrk, czrk = sincos(z1 / r)
-                szsk, czsk = sincos(z2 / s)
-                sqpr = sqrt(1.0 / p^2 + 1.0 / r^2)
-                sqqs = sqrt(1.0 / q^2 + 1.0 / s^2)
-                epr = exp(x1 * sqpr)
-                eqs = exp(x2 * sqqs)
-                for n in 1:2
-                    for nn in 1:2
-                        if m == 1
-                            fx = -sqpr * epr * cypi * szrk
-                            fy = epr * sypi * szrk / p
-                            fz = -epr * cypi * czrk / r
-                            if n == 1
-                                hx, hy, hz = nn == 1 ? (fx, fy, fz) : (fx * x_sc, fy * x_sc, fz * x_sc)
-                            else
-                                hx, hy, hz = nn == 1 ? (fx * cps, fy * cps, fz * cps) : (fx * cps * x_sc, fy * cps * x_sc, fz * cps * x_sc)
-                            end
-                        else  # m == 2
-                            fx = -sps * sqqs * eqs * cyqi * czsk
-                            fy = sps / q * eqs * syqi * czsk
-                            fz = sps / s * eqs * cyqi * szsk
-                            if n == 1
-                                hx, hy, hz = nn == 1 ? (fx, fy, fz) : (fx * x_sc, fy * x_sc, fz * x_sc)
-                            else
-                                hx, hy, hz = nn == 1 ? (fx * s3ps, fy * s3ps, fz * s3ps) : (fx * s3ps * x_sc, fy * s3ps * x_sc, fz * s3ps * x_sc)
-                            end
-                        end
-                        l += 1
-                        ct, st = m == 1 ? (ct1, st1) : (ct2, st2)
-                        hxr = hx * ct + hz * st
-                        hzr = -hx * st + hz * ct
-                        bx += hxr * a[l]
-                        by += hy * a[l]
-                        bz += hzr * a[l]
-                    end
-                end
-            end
-        end
-    end
-    return bx, by, bz
-end
+birk_shl(a, ps, x_sc, x, y, z) = _harmonic_shield(a, ps, x_sc, x, y, z, 1.0)
 
 
 
