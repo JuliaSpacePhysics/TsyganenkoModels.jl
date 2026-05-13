@@ -1,89 +1,61 @@
-function extall(pdyn, dst, byimf, bzimf, w1, w2, w3, w4, w5, w6, ps, x, y, z)
-    a = TS04_A
-    rh2 = -5.2
-    dsig = 0.005  # T04 uses 0.005 vs T01's 0.003
+# Saturation function from TS04: bounded surrogate for the W-index drivers.
+@inline _sat(w, a) = a * w / sqrt(w^2 + a^2)
 
-    # T04 uses fixed rh0 and g values (different from T01)
-    rh0 = 7.5   # tail hinging distance (T01 uses a[40] ≈ 9.0)
-    g = 35.0    # tail warping parameter (T01 uses a[41] ≈ 28.2)
-
-    xappa = (pdyn / 2.0)^a[23]
+function ts04_extall(pdyn, dst, byimf, bzimf, w1, w2, w3, w4, w5, w6, ps, x, y, z)
+    c = TS04_C
+    xappa = (pdyn / 2.0)^c.xappa_exp
     xappa3 = xappa^3
     xx, yy, zz = x * xappa, y * xappa, z * xappa
 
     sps = sin(ps)
-    x0 = TS04_A0_X0 / xappa
-    am = TS04_A0_A / xappa
-    s0 = TS04_A0_S0
+    x0 = MP_X0 / xappa; am = MP_A / xappa; s0 = MP_S0
 
-    # IMF penetration factor - T04 uses single value (T01 uses theta-dependent)
-    factimf = a[20]
-    oimfy, oimfz = byimf * factimf, bzimf * factimf
-    oimf = (0.0, oimfy, oimfz)
+    # TS04 uses a single (theta-independent) IMF penetration factor.
+    oimf = (0.0, byimf * c.factimf, bzimf * c.factimf)
 
-    # Iterative search for sigma (magnetopause distance)
-    r = sqrt(x^2 + y^2 + z^2)
-    xss, zss = x, z
-    for _ in 1:20
-        rh = rh0 + rh2 * (zss / r)^2
-        sinpsas = sps / (1.0 + (r / rh)^3)^0.33333333
-        cospsas = sqrt(1.0 - sinpsas^2)
-        xss_new = x * cospsas - z * sinpsas
-        zss_new = x * sinpsas + z * cospsas
-        abs(xss_new - xss) + abs(zss_new - zss) < 1.0e-6 && break
-        xss, zss = xss_new, zss_new
-    end
-
+    xss, zss = _warped_xz(x, y, z, sps, c.rh0)
     rho2 = y^2 + zss^2
     sigma = _sigma(xss, x0, am, rho2)
 
-    return _switch(sigma, s0, dsig, ps, x, y, z, oimf; q0 = 30115.0) do
-        # Dipole shielding field
+    return _switch(sigma, s0, 0.005, ps, x, y, z, oimf; q0 = 30115.0) do
+        _amp(c, w, β) = c.c + c.w * _sat(w, β)
+        _tamp(c, dlp, w, β) = c.c + c.dlp * dlp + c.w * _sat(w, β)
+
+        ws = c.w_sat
+
         bcf = shlcar3x3(xx, yy, zz, ps)
 
-        # Tail field parameters - T04 uses dst-dependent dxshift and w1-dependent d
-        dstt = min(dst, -20.0)
-        znam_tail = abs(dstt)^0.37
-        dxshift1 = a[24] - a[25] / znam_tail  # a[23]-a[24]/znam in Python
-        dxshift2 = a[26] - a[27] / znam_tail  # a[25]-a[26]/znam in Python
-        d = a[36] * exp(-w1 / a[37]) + a[69]  # a[35]*exp(-w1/a[36])+a[68] in Python
-        deltady = 4.7  # T04 uses fixed value (T01 uses a[29])
+        # Tail (dst-dependent dxshift, w1-dependent thickness)
+        znam_tail = abs(min(dst, -20.0))^0.37
+        state = (;
+            dxshift1 = c.dxshift1.c - c.dxshift1.znam / znam_tail,
+            dxshift2 = c.dxshift2.c - c.dxshift2.znam / znam_tail,
+            d = c.d.a * exp(-w1 / c.d.b) + c.d.off,
+            deltady = c.deltady,
+            g = c.g,
+        )
+        bt1, bt2 = deformed(ps, xx, yy, zz, c.rh0, state)
+        dlp1 = (pdyn / 2.0)^c.dlp1_exp
+        dlp2 = (pdyn / 2.0)^c.dlp2_exp
+        B_tail = _tamp(c.tamp1, dlp1, w1, ws[1]) .* bt1 .+ _tamp(c.tamp2, dlp2, w2, ws[2]) .* bt2
 
-        state = (; dxshift1, dxshift2, d, deltady, g)
-        bt1, bt2 = deformed(ps, xx, yy, zz, rh0, state)
-
-        # Birkeland field parameters - T04 uses dst-dependent xkappa
-        znam_birk = max(abs(dst), 20.0)
-        xkappa1 = a[32] * (znam_birk / 20.0)^a[33]
-        xkappa2 = a[34] * (znam_birk / 20.0)^a[35]
+        # Birkeland (TS04 keeps only region-1 of each mode; r12, r22 unused)
+        znam = max(abs(dst), 20.0)
+        xkappa1 = c.xkappa1.c * (znam / 20.0)^c.xkappa1.exp
+        xkappa2 = c.xkappa2.c * (znam / 20.0)^c.xkappa2.exp
         br11, _, br21, _ = birk_tot(ps, xx, yy, zz, xkappa1, xkappa2)
+        B_birk = _amp(c.r11, w5, ws[5]) .* br11 .+ _amp(c.r21, w6, ws[6]) .* br21
 
-        # Ring current parameters - T04 uses fixed phi from array
-        phi = a[38]
-        znam_rc = max(abs(dst), 20.0)
-        sc_sy = a[28] * (20.0 / znam_rc)^a[29] * xappa
-        sc_pr = a[30] * (20.0 / znam_rc)^a[31] * xappa
-        bsrc, bprc = full_rc(ps, xx, yy, zz, phi, sc_sy, sc_pr)
+        # Ring current (fixed phi from fit)
+        sc_sy = c.sc_sy.c * (20.0 / znam)^c.sc_sy.exp * xappa
+        sc_pr = c.sc_pr.c * (20.0 / znam)^c.sc_pr.exp * xappa
+        bsrc, bprc = full_rc(ps, xx, yy, zz, c.phi, sc_sy, sc_pr)
+        B_rc = _amp(c.src, w3, ws[3]) .* bsrc .+ _amp(c.prc, w4, ws[4]) .* bprc
 
-        # IMF components inside magnetosphere
+        # Amplitudes driven by W indices through the saturation function.
         bimf = (0.0, byimf, bzimf)
 
-        # Amplitude formulas - T04 uses w-indices with saturation terms
-        dlp1 = (pdyn / 2.0)^a[21]
-        dlp2 = (pdyn / 2.0)^a[22]
 
-        # Saturation function: a*w/sqrt(w^2+a^2) approaches 1 as w→∞
-        tamp1 = a[2] + a[3] * dlp1 + a[4] * a[39] * w1 / sqrt(w1^2 + a[39]^2) + a[5] * dst
-        tamp2 = a[6] + a[7] * dlp2 + a[8] * a[40] * w2 / sqrt(w2^2 + a[40]^2) + a[9] * dst
-        a_src = a[10] + a[11] * a[41] * w3 / sqrt(w3^2 + a[41]^2) + a[12] * dst
-        a_prc = a[13] + a[14] * a[42] * w4 / sqrt(w4^2 + a[42]^2) + a[15] * dst
-        a_r11 = a[16] + a[17] * a[43] * w5 / sqrt(w5^2 + a[43]^2)
-        a_r21 = a[18] + a[19] * a[44] * w6 / sqrt(w6^2 + a[44]^2)
-
-        # T04 only uses r11 and r21 Birkeland terms (not r12 and r22 like T01)
-        @. a[1] * xappa3 * bcf + tamp1 * bt1 + tamp2 * bt2 +
-            a_src * bsrc + a_prc * bprc +
-            a_r11 * br11 + a_r21 * br21 +
-            a[20] * bimf
+        @. c.amp_cf * xappa3 * bcf + B_tail + B_rc + B_birk + c.factimf * bimf
     end
 end

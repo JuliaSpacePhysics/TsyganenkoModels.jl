@@ -29,11 +29,8 @@ end
 
     param = (; pdyn = 2.0, dst = -87.0, byimf = 2.0, bzimf = -5.0)
 
-    result = T96(param)(r_gsm, ps)
-    @test result ≈ [61.17831041891597, -1.4611958991749145, -40.44973158310239]
-    # T01 model test
-    result_t01 = T01(param)(r_gsm, ps)
-    @test result_t01 ≈ [46.972663449207076, 1.5442350206329172, -31.3541847716317] rtol = 1.0e-6
+    @test T96(param)(r_gsm, ps) ≈ [61.17831041891597, -1.4611958991749145, -40.44973158310239]
+    @test T01(param)(r_gsm, ps) ≈ [46.972663449207076, 1.5442350206329172, -31.3541847716317] rtol = 1.0e-6
     @test TS04(param)(r_gsm, ps) ≈ [25.835474201385036, 1.5987724615979861, -18.1054945348421]
 
     @testset "near magnetopause and outside magnetosphere" begin
@@ -70,8 +67,8 @@ end
     ps = -0.46049650108726486
     @test collect(TsyganenkoModels.shlcar3x3(1, 2, 3, ps)) ≈ [-6.624367426893622, 0.5530405783442072, 19.261862546642284]
 
-    @test collect(TsyganenkoModels.rc_symm(0, 0, 1)) ≈ [0.0, 0.0, -15.875017940770613] rtol=1e-6
-    @test collect(TsyganenkoModels.prc_quad(0, 0, 1)) ≈ [-38.33420080986639, 0.0, 0.0] rtol=1e-6
+    @test collect(TsyganenkoModels.rc_symm(0, 0, 1)) ≈ [0.0, 0.0, -15.875017940770613] rtol = 1.0e-6
+    @test collect(TsyganenkoModels.prc_quad(0, 0, 1)) ≈ [-38.33420080986639, 0.0, 0.0] rtol = 1.0e-6
 end
 
 @testset "Field line tracing" begin

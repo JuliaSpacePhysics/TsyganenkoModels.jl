@@ -1,62 +1,52 @@
-function extall(pdyn, dst, byimf, bzimf, g1, g2, ps, x, y, z)
-    a = T01_A
-    rh2 = -5.2
-    xappa = (pdyn / 2.0)^a[39]
-    rh0 = a[40]
+function t01_extall(pdyn, dst, byimf, bzimf, g1, g2, ps, x, y, z)
+    c = T01_C
+    xappa = (pdyn / 2.0)^c.xappa_exp
     xappa3 = xappa^3
     xx, yy, zz = x * xappa, y * xappa, z * xappa
     sps = sin(ps)
-    x0 = A0_X0 / xappa; am = A0_A / xappa; s0 = A0_S0
+    x0 = MP_X0 / xappa; am = MP_A / xappa; s0 = MP_S0
     bimf = (0.0, byimf, bzimf)
 
     theta = (byimf == 0.0 && bzimf == 0.0) ? 0.0 : (t = atan(byimf, bzimf); t <= 0 ? t + 2π : t)
     sthetah = sin(theta / 2.0)^2
-    factimf = a[24] + a[25] * sthetah
-    oimfy, oimfz = byimf * factimf, bzimf * factimf
-    oimf = (0.0, oimfy, oimfz)
+    factimf = c.factimf.c + c.factimf.sth * sthetah
+    oimf = (0.0, byimf * factimf, bzimf * factimf)
 
-    r = sqrt(x^2 + y^2 + z^2); xss, zss = x, z
-    for _ in 1:20
-        rh = rh0 + rh2 * (zss / r)^2
-        sinpsas = sps / (1.0 + (r / rh)^3)^0.33333333
-        cospsas = sqrt(1.0 - sinpsas^2)
-        xss_new = x * cospsas - z * sinpsas
-        zss_new = x * sinpsas + z * cospsas
-        abs(xss_new - xss) + abs(zss_new - zss) < 1.0e-6 && break
-        xss, zss = xss_new, zss_new
-    end
-
+    xss, zss = _warped_xz(x, y, z, sps, c.rh0)
     rho2 = y^2 + zss^2
     sigma = _sigma(xss, x0, am, rho2)
-    dsig = 0.003
-    return _switch(sigma, s0, dsig, ps, x, y, z, oimf; q0 = 30115.0) do
-        bcf = shlcar3x3(xx, yy, zz, ps)
 
+    return _switch(sigma, s0, 0.003, ps, x, y, z, oimf; q0 = 30115.0) do
+        _tail_amp(c, dlp, g1, dst) = c.c + c.dlp * dlp + c.g1 * g1 + c.dst * dst
+        _birk_amp(c) = c.c + c.g2 * g2
+        _rc_amp(c) = c.c + c.dst * dst + c.sqp * sqrt(pdyn)
+
+        bcf = shlcar3x3(xx, yy, zz, ps)
         # Tail
         state = (;
-            dxshift1 = a[26] + a[27] * g2, dxshift2 = 0.0, d = a[28], deltady = a[29], g = a[41],
+            dxshift1 = c.dxshift.c + c.dxshift.g2 * g2,
+            dxshift2 = 0.0,
+            d = c.d, deltady = c.deltady, g = c.g,
         )
-        bt1, bt2 = deformed(ps, xx, yy, zz, rh0, state)
+        bt1, bt2 = deformed(ps, xx, yy, zz, c.rh0, state)
+        dlp1 = (pdyn / 2.0)^c.dlp1_exp
+        dlp2 = (pdyn / 2.0)^c.dlp2_exp
+        B_tail = _tail_amp(c.tamp1, dlp1, g1, dst) .* bt1 .+ _tail_amp(c.tamp2, dlp2, g1, dst) .* bt2
 
-        # Birk
-        xkappa1 = a[35] + a[36] * g2; xkappa2 = a[37] + a[38] * g2
+        # Birkeland
+        xkappa1 = c.xkappa1.c + c.xkappa1.g2 * g2
+        xkappa2 = c.xkappa2.c + c.xkappa2.g2 * g2
         br11, br12, br21, br22 = birk_tot(ps, xx, yy, zz, xkappa1, xkappa2)
+        B_birk = _birk_amp(c.r11) .* br11 .+ _birk_amp(c.r12) .* br12 .+ _birk_amp(c.r21) .* br21 .+ _birk_amp(c.r22) .* br22
 
-        # RC
-        phi = 0.5π * tanh(abs(dst) / a[34])
+        # Ring current
+        phi = 0.5π * tanh(abs(dst) / c.rc_phi_denom)
         znam = max(abs(dst), 20.0)
-        sc_sy = a[30] * (20.0 / znam)^a[31] * xappa
-        sc_pr = a[32] * (20.0 / znam)^a[33] * xappa
+        sc_sy = c.sc_sy.c * (20.0 / znam)^c.sc_sy.exp * xappa
+        sc_pr = c.sc_pr.c * (20.0 / znam)^c.sc_pr.exp * xappa
         bsrc, bprc = full_rc(ps, xx, yy, zz, phi, sc_sy, sc_pr)
+        B_rc = _rc_amp(c.src) .* bsrc .+ _rc_amp(c.prc) .* bprc
 
-        # Amplitudes
-        dlp1 = (pdyn / 2.0)^a[42]; dlp2 = (pdyn / 2.0)^a[43]
-        tamp1 = a[2] + a[3] * dlp1 + a[4] * g1 + a[5] * dst
-        tamp2 = a[6] + a[7] * dlp2 + a[8] * g1 + a[9] * dst
-        a_src = a[10] + a[11] * dst + a[12] * sqrt(pdyn)
-        a_prc = a[13] + a[14] * dst + a[15] * sqrt(pdyn)
-        a_r11 = a[16] + a[17] * g2; a_r12 = a[18] + a[19] * g2
-        a_r21 = a[20] + a[21] * g2; a_r22 = a[22] + a[23] * g2
-        @. a[1] * xappa3 * bcf + tamp1 * bt1 + tamp2 * bt2 + a_src * bsrc + a_prc * bprc + a_r11 * br11 + a_r12 * br12 + a_r21 * br21 + a_r22 * br22 + factimf * bimf
+        @. c.amp_cf * xappa3 * bcf + B_tail + B_rc + B_birk + factimf * bimf
     end
 end

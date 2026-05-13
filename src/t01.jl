@@ -9,14 +9,8 @@
 #   1. Mathematical structure. 2. Parameterization and fitting to observations."
 #   J.Geophys.Res., 2002.
 #
-
-module T01Impl
-    using ..TsyganenkoModels: birk_tot, full_rc, dipole, deformed, shlcar3x3, _sigma, _switch
-    include("t01_consts.jl")
-    include("t01_funcs.jl")
-end
-
-using .T01Impl
+include("t01_consts.jl")
+include("t01_funcs.jl")
 
 """
     t01(x, y, z, ps, pdyn, dst, byimf, bzimf, g1 = 0.0, g2 = 0.0) -> (Bx, By, Bz)
@@ -26,7 +20,7 @@ Compute GSM components of the external magnetic field using the Tsyganenko 01 mo
 function t01(x, y, z, ps, pdyn, dst, byimf, bzimf, g1 = 0.0, g2 = 0.0)
     x < -20.0 && @warn "The model is valid sunward from X=-15 Re only, while you are trying to use it at X=$x"
     dst_ast = dst * 0.8 - 13.0 * sqrt(pdyn)
-    return GSM(T01Impl.extall(pdyn, dst_ast, byimf, bzimf, g1, g2, ps, x, y, z))
+    return GSM(t01_extall(pdyn, dst_ast, byimf, bzimf, g1, g2, ps, x, y, z))
 end
 
 # Functor interfaces for T01
