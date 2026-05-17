@@ -1,5 +1,5 @@
 using Bumper
-using SpecialFunctions
+using Bessels: besselj0, besselj1
 
 function dipshld(ps, x, y, z)
     sps, cps = sincos(ps)
