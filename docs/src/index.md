@@ -49,7 +49,7 @@ t = DateTime("1970-01-01T00:01:40")
 ps = -0.533585131  # dipole tilt angle [radians]
 
 # Using dipole tilt angle
-B_t89 = T89(2)(𝐫, ps)
+B_t89 = model_t89(𝐫, ps)
 ```
 
 ```@repl quickstart
