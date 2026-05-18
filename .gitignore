@@ -10,3 +10,4 @@ geopack
 __pycache__
 pixi.lock
 python/dist
+*local*

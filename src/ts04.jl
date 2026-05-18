@@ -40,18 +40,14 @@ function TS04(; pdyn, dst, byimf, bzimf, w1 = 0.0, w2 = 0.0, w3 = 0.0, w4 = 0.0,
     return TS04(promote(pdyn, dst, byimf, bzimf, w1, w2, w3, w4, w5, w6)...)
 end
 
-module TS04Impl
-    using ..TsyganenkoModels: birk_tot, full_rc, dipole, deformed, shlcar3x3, _sigma, _switch
-    include("ts04_consts.jl")
-    include("ts04_funcs.jl")
-end
+include("ts04_consts.jl")
+include("ts04_funcs.jl")
 
-using .TS04Impl
 
 function ts04(x, y, z, ps, pdyn, dst, byimf, bzimf, w1 = 0.0, w2 = 0.0, w3 = 0.0, w4 = 0.0, w5 = 0.0, w6 = 0.0)
     x < -20.0 && @warn "The model is valid sunward from X=-15 Re only, while you are trying to use it at X=$x"
     dst_ast = dst * 0.8 - 13.0 * sqrt(pdyn)
-    return GSM(TS04Impl.extall(pdyn, dst_ast, byimf, bzimf, w1, w2, w3, w4, w5, w6, ps, x, y, z))
+    return GSM(ts04_extall(pdyn, dst_ast, byimf, bzimf, w1, w2, w3, w4, w5, w6, ps, x, y, z))
 end
 
 evalmodel(m::TS04, x, y, z, ps) = ts04(x, y, z, ps, m.pdyn, m.dst, m.byimf, m.bzimf, m.w1, m.w2, m.w3, m.w4, m.w5, m.w6)
