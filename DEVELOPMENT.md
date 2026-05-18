@@ -23,27 +23,24 @@ TsyganenkoModels.jl/
 │   └── test_geopack.jl         # Cross-validation vs Python geopack
 │
 ├── lib/Geopack.jl/             # Julia wrapper for Python geopack (reference)
-├── python/                     # PyPI wrapper package (tsyganenkomodels-jl)
-└── docs/                       # Docusaurus site
 
 ---
 Data Flow
 
 User call: model(x, y, z, ps)
     └─ evalmodel(m::T01, ...) → t01(x,y,z,ps,params)
-           └─ T01Impl.extall(...)
-                  ├─ shlcar3x3()          # Chapman-Ferraro (magnetopause currents)
-                  ├─ deformed()           # Tail current sheet
-                  ├─ birk_tot()           # Birkeland (Region 1 & 2)
-                  ├─ full_rc()            # Ring current ← ring_current.jl
-                  └─ linear combination   # weighted sum via model params
+        └─ t01_extall(...)
+            ├─ shlcar3x3()          # Chapman-Ferraro (magnetopause currents)
+            ├─ deformed()           # Tail current sheet
+            ├─ birk_tot()           # Birkeland (Region 1 & 2)
+            ├─ full_rc()            # Ring current ← ring_current.jl
+            └─ linear combination   # weighted sum via model params
 
 TS04 has the same structure but adds 6 activity weights (w1–w6) and slightly different fixed parameters (rh0=7.5, g=35 vs T01's parameter-fitted values).
 
 ---
 Key Design Patterns
 
-- Each model is a submodule (module T01Impl) — isolates constants, avoids namespace pollution
 - Functor interface — (m::T01)(x, y, z, ps) dispatches to evalmodel, then the raw function
 - _switch — smooth magnetopause boundary: inside → full model, outside → just IMF penetration
 - Component functions shared across T01/TS04: full_rc, birk_tot, deformed, shlcar3x3 all live in the parent module and are imported
@@ -59,8 +56,6 @@ Four implementations of the same harmonic shielding pattern: birk_shl, rc_shield
 
 _rc_symm, prc_quad, and one_cone all compute Jacobians via finite differences — this cross-cutting pattern appears 3 times in 3 different files with slightly different step sizes (1e-4, 1e-4, 1e-6). No shared helper.
 
-Cardano cubic solver duplicated in ap_rc:68-75 and apprc:109-116 — identical 7 lines.
-
 prox proximity correction pattern identical in both ap_rc and apprc.
 
 ### Performance
@@ -68,12 +63,6 @@ prox proximity correction pattern identical in both ap_rc and apprc.
 one_cone (called 4× per field point via birk_tot) fires 4 FD calls to r_s and theta_s (lines 92–95), costing 8 function evaluations for what is a 2×2 Jacobian. Replacing with ForwardDiff.jl dual numbers would cost ~2 function evaluations. Straightforward win since r_s/theta_s are pure scalar functions.
 
 prc_quad calls br_prc_q and bt_prc_q 6× total (3 FD pairs). Each has 18/17 basis terms. ForwardDiff or analytic derivatives would halve this.
-
-fialcos loop is always 1 or 2 iterations (n = mode ∈ {1, 2}) — the loop body is expensive (branches, trig, tangent calls). Unrolling as mode == 1 ? ... : ... would eliminate branch overhead and expose more to the compiler.
-
-Missing @inbounds on all the inner accumulation loops (taildisk, shlcar5x5, rc_shield, birk_shl, shlcar3x3). Arrays are fixed-size constants so bounds checks are pure waste.
-
-sincos underuse: prc_quad:138 does sin(tp), cos(tp), sin(tm), cos(tm) separately (inconsistent with line 130 which uses sincos). one_cone:92-95 does the same. fialcos calls tan(tetanp*0.5) and tan(tetanm*0.5) without sincos.
 
 Bumper.jl used only in t96_helpers.jl (3 spots: birk1tot_02 and r2inner). The T01/TS04 hot paths don't use it — they happen to avoid allocations by returning scalar tuples, which is good but accidental.
 
@@ -98,15 +87,9 @@ apprc:107-108 — two lines of chained arithmetic longer than the screen. Each c
 ┌─────────────┬───────────────────────────────────────────┬──────────────────────────┐
 │    Area     │                   Issue                   │          Impact          │
 ├─────────────┼───────────────────────────────────────────┼──────────────────────────┤
-│ Design      │ birk_shl ≡ rc_shield (scale factor apart) │ -50 LoC                  │
-├─────────────┼───────────────────────────────────────────┼──────────────────────────┤
-│ Design      │ Cardano solver duplicated                 │ -7 LoC                   │
-├─────────────┼───────────────────────────────────────────┼──────────────────────────┤
 │ Performance │ one_cone 4 FD evals → ForwardDiff         │ ~2–4× for Birkeland      │
 ├─────────────┼───────────────────────────────────────────┼──────────────────────────┤
 │ Performance │ prc_quad 6 FD evals → ForwardDiff         │ ~2× for PRC quadrupole   │
-├─────────────┼───────────────────────────────────────────┼──────────────────────────┤
-│ Performance │ sincos half-used                          │ minor                    │
 ├─────────────┼───────────────────────────────────────────┼──────────────────────────┤
 │ Simplicity  │ l counter pattern × 4                     │ fragile, blocks inbounds │
 ├─────────────┼───────────────────────────────────────────┼──────────────────────────┤
