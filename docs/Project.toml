@@ -9,3 +9,6 @@ TsyganenkoModels = "14dfbe45-703c-4bf3-b096-15691adbb981"
 
 [sources]
 Geopack = {path = "../lib/Geopack.jl"}
+
+[compat]
+Documenter = "1.17.0"
