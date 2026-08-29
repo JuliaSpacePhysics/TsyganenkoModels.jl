@@ -2,8 +2,6 @@
 
 Modeling of Earth's Magnetosphere Using Spacecraft Magnetometer Data
 
-**Documentation**: [![Dev](https://img.shields.io/badge/docs-dev-blue.svg?logo=julia)](https://JuliaSpacePhysics.github.io/TsyganenkoModels.jl/dev/)
-
 ## Quickstart
 
 ```julia
@@ -26,7 +24,7 @@ B_t96 = T96(param)(𝐫, ps)
 B_t01 = T01(param)(𝐫, ps)
 B_ts04 = TS04(param)(𝐫, ps)
 
-# Using `TsyIGRF` to combine IGRF14 model and Tsyganenko model (default T89)
+# Using `TsyIGRF` to combine IGRF14 model and Tsyganenko model, default TsyIGRF() == TsyIGRF(T89(iopt=3))
 TsyIGRF()(𝐫, t)
 ```
 
@@ -57,6 +55,4 @@ A Julia wrapper for [`geopack`](https://github.com/tsssss/geopack) is available 
 [![DOI](https://zenodo.org/badge/1139356853.svg)](https://doi.org/10.5281/zenodo.18435633)
 [![version](https://juliahub.com/docs/General/TsyganenkoModels/stable/version.svg)](https://juliahub.com/ui/Packages/General/TsyganenkoModels)
 ![PyPI - Version](https://img.shields.io/pypi/v/tsyganenkomodels-jl)
-
-[![Build Status](https://github.com/JuliaSpacePhysics/TsyganenkoModels.jl/actions/workflows/CI.yml/badge.svg?branch=main)](https://github.com/JuliaSpacePhysics/TsyganenkoModels.jl/actions/workflows/CI.yml?query=branch%3Amain)
 [![Coverage](https://codecov.io/gh/JuliaSpacePhysics/TsyganenkoModels.jl/branch/main/graph/badge.svg)](https://codecov.io/gh/JuliaSpacePhysics/TsyganenkoModels.jl)

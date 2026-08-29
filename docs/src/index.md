@@ -20,18 +20,12 @@ Modeling of Earth's Magnetosphere Using Spacecraft Magnetometer Data.
 !!! note "IRBEM.jl"
     [`IRBEM.jl`](https://github.com/JuliaSpacePhysics/IRBEM.jl) is a Julia wrapper for the IRBEM Fortran library that exposes magnetic field computation via `GET_FIELD_MULTI` and supports more Tsyganenko models, but may be outdated and slower than the native Julia implementations.
 
-## Installation
-
-```julia
-using Pkg
-Pkg.add("TsyganenkoModels")
-```
-
 ## Quickstart
 
 The model interface allows you to configure a model once and use it for multiple field calculations:
 
 ```@example quickstart
+using Pkg; Pkg.add("TsyganenkoModels")
 using TsyganenkoModels
 using Dates
 
