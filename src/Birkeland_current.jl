@@ -71,7 +71,6 @@ function twocones(a, x, y, z, mode, dtheta)
 end
 
 function one_cone(a, x, y, z, mode, dtheta)
-    dr, dt = 1.0e-6, 1.0e-6
     theta0 = a[31]
 
     rho2 = x^2 + y^2; rho = sqrt(rho2)
@@ -82,17 +81,13 @@ function one_cone(a, x, y, z, mode, dtheta)
     phi = atan(y, x)
 
     # Deformation
-    rs = r_s(a, r, theta)
-    thetas = theta_s(a, r, theta)
+    rd, td = _duals(r, theta)
+    rsd, tsd = r_s(a, rd, td), theta_s(a, rd, td)
+    rs, (drsdr, drsdt) = rsd.v, rsd.d
+    thetas, (dtsdr, dtsdt) = tsd.v, tsd.d
 
     # Field at deformed position
     btast, bfast = fialcos(rs, thetas, phi, mode, theta0, dtheta)
-
-    # Derivatives for transformation
-    drsdr = (r_s(a, r + dr, theta) - r_s(a, r - dr, theta)) / (2.0 * dr)
-    drsdt = (r_s(a, r, theta + dt) - r_s(a, r, theta - dt)) / (2.0 * dt)
-    dtsdr = (theta_s(a, r + dr, theta) - theta_s(a, r - dr, theta)) / (2.0 * dr)
-    dtsdt = (theta_s(a, r, theta + dt) - theta_s(a, r, theta - dt)) / (2.0 * dt)
 
     stsst = sin(thetas) / max(sin(theta), 1.0e-10)
     rsr = rs / r

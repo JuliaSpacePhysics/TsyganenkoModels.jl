@@ -10,6 +10,7 @@ export T89, T96, T01, TS04, TsyIGRF, IGRF
 
 export getcsys, GSM, GEO
 
+include("dual.jl")
 include("models.jl")
 include("dipole.jl")
 include("Birkeland_current.jl")
