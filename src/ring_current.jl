@@ -27,10 +27,6 @@ end
 
 rc_symm(x, y, z) = _rc_symm(ap_rc, x, y, z)
 
-@inline function _pole_floor(sint, cost)
-    return sint < 1.0e-2 ? (1.0e-2, 0.99994999875, sint / 1.0e-2) : (sint, cost, 1.0)
-end
-
 # Cardano root-finding + elliptic-integral vector potential, shared by ap_rc / apprc.
 # gammas = (possibly distorted) cos(θ)/r² coordinate used for both the solve and rho/z.
 @fastmath function _vector_potential(alpha_s, gammas, a1, rrc1, dd1, a2, rrc2, dd2)
@@ -46,20 +42,22 @@ end
 end
 
 function _rc_symm(f, x, y, z)
-    ds, dc, d, drd = 1.0e-2, 0.99994999875, 1.0e-4, 5.0e3
+    ds, dc = 1.0e-2, 0.99994999875
     rho2 = x^2 + y^2; r2 = rho2 + z^2; r = sqrt(r2)
-    rp, rm = r + d, r - d; sint, cost = sqrt(rho2) / r, z / r
+    sint, cost = sqrt(rho2) / r, z / r
     return if sint < ds
-        a = f(r, ds, dc) / ds
-        dardr = (rp * f(rp, ds, dc) - rm * f(rm, ds, dc)) * drd
+        rd, = _duals(r)
+        fd = f(rd, ds, dc)
+        a = fd.v / ds
+        dardr = fd.v + r * fd.d[1]
         fxy = z * (2.0 * a - dardr) / (r * r2)
         fxy * x, fxy * y, (2.0 * a * cost^2 + dardr * sint^2) / r
     else
-        theta = atan(sint, cost); tp, tm = theta + d, theta - d
-        sintp, costp = sincos(tp)
-        sintm, costm = sincos(tm)
-        br = (sintp * f(r, sintp, costp) - sintm * f(r, sintm, costm)) / (r * sint) * drd
-        bt = (rm * f(rm, sint, cost) - rp * f(rp, sint, cost)) / r * drd
+        rd, td = _duals(r, atan(sint, cost))
+        fd = f(rd, sincos(td)...)
+        dfdr, dfdt = fd.d
+        br = (fd.v * cost + sint * dfdt) / (r * sint)
+        bt = -(fd.v + r * dfdr) / r
         fxy = (br + bt * cost / sint) / r
         fxy * x, fxy * y, br * cost - bt * sint
     end
@@ -71,17 +69,15 @@ end
     p1, r1, dr1, dla1 = -0.2291904607, 3.74606474, 1.508802177, 0.5873525737
     p2, r2, dr2, dla2 = 0.1556236119, 4.993638842, 3.324180497, 0.4368407663
     p3, r3, dr3 = 0.1855957207, 2.969226745, 2.243367377
-    sint1, cost1, prox = _pole_floor(sint, cost)
-    alpha, gamma = sint1^2 / r, cost1 / r^2
-    arg1 = -((r - r1) / dr1)^2 - (cost1 / dla1)^2
-    arg2 = -((r - r2) / dr2)^2 - (cost1 / dla2)^2
+    alpha, gamma = sint^2 / r, cost / r^2
+    arg1 = -((r - r1) / dr1)^2 - (cost / dla1)^2
+    arg2 = -((r - r2) / dr2)^2 - (cost / dla2)^2
     arg3 = -((r - r3) / dr3)^2
-    dexp1 = arg1 < -500.0 ? 0.0 : exp(arg1)
-    dexp2 = arg2 < -500.0 ? 0.0 : exp(arg2)
-    dexp3 = arg3 < -500.0 ? 0.0 : exp(arg3)
+    dexp1 = exp(arg1)
+    dexp2 = exp(arg2)
+    dexp3 = exp(arg3)
     alpha_s = alpha * (1.0 + p1 * dexp1 + p2 * dexp2 + p3 * dexp3)
-    ap = _vector_potential(alpha_s, gamma, a1, rrc1, dd1, a2, rrc2, dd2)
-    return ap * prox
+    return _vector_potential(alpha_s, gamma, a1, rrc1, dd1, a2, rrc2, dd2)
 end
 
 function elliptic_aphi(rrc, rhos, zs, dd)
@@ -102,12 +98,11 @@ prc_symm(x, y, z) = _rc_symm(apprc, x, y, z)
     p3, alpha3, dal3, beta4, dg3, beta5 = 103.1601001, -0.00764731187, 0.1046487459, 2.958863546, 0.01172314188, 0.4382872938
     q0, q1, alpha4, dal4, dg4 = 0.0113490815, 14.51339943, 0.2647095287, 0.07091230197, 0.01512963586
     q2, alpha5, dal5, dg5, beta6, beta7 = 6.861329631, 0.1677400816, 0.04433648846, 0.05553741389, 0.7665599464, 0.7277854652
-    sint1, cost1, prox = _pole_floor(sint, cost)
-    alpha, gamma = sint1^2 / r, cost1 / r^2
+    alpha, gamma = sint^2 / r, cost / r^2
     arg1 = -(gamma / dg1)^2
     arg2 = -((alpha - alpha4) / dal4)^2 - (gamma / dg4)^2
-    dexp1 = arg1 < -500.0 ? 0.0 : exp(arg1)
-    dexp2 = arg2 < -500.0 ? 0.0 : exp(arg2)
+    dexp1 = exp(arg1)
+    dexp2 = exp(arg2)
     alpha_s = alpha * (1.0
         + p1 / (1.0 + ((alpha - alpha1) / dal1)^2)^beta1 * dexp1
         + p2 * (alpha - alpha2) / (1.0 + ((alpha - alpha2) / dal2)^2)^beta2 / (1.0 + (gamma / dg2)^2)^beta3
@@ -115,31 +110,25 @@ prc_symm(x, y, z) = _rc_symm(apprc, x, y, z)
     gamma_s = gamma * (1.0 + q0
         + q1 * (alpha - alpha4) * dexp2
         + q2 * (alpha - alpha5) / (1.0 + ((alpha - alpha5) / dal5)^2)^beta6 / (1.0 + (gamma / dg5)^2)^beta7)
-    ap = _vector_potential(alpha_s, gamma_s, a1, rrc1, dd1, a2, rrc2, dd2)
-    return ap * prox
+    return _vector_potential(alpha_s, gamma_s, a1, rrc1, dd1, a2, rrc2, dd2)
 end
 
 function prc_quad(x, y, z)
-    d, dd, ds, dc = 1.0e-4, 2.0e-4, 1.0e-2, 0.99994999875
+    ds, dc = 1.0e-2, 0.99994999875
     rho2 = x^2 + y^2; r = sqrt(rho2 + z^2); rho = sqrt(rho2)
-    sint, cost = rho / r, z / r; rp, rm = r + d, r - d
+    sint, cost = rho / r, z / r
+    st, ct = sint > ds ? (sint, cost) : (ds, z < 0.0 ? -dc : dc)
+    rd, td = _duals(r, atan(st, ct))
+    sd, cd = sincos(td)
+    brd, btd = br_prc_q(rd, sd, cd), bt_prc_q(rd, sd, cd)
+    br, dbrr = brd.v, brd.d[1]
+    bt, dbtt = btd.v, btd.d[2]
     if sint > ds
         cphi, sphi = x / rho, y / rho
-        br, bt = br_prc_q(r, sint, cost), bt_prc_q(r, sint, cost)
-        dbrr = (br_prc_q(rp, sint, cost) - br_prc_q(rm, sint, cost)) / dd
-        theta = atan(sint, cost); tp, tm = theta + d, theta - d
-        sintp, costp = sincos(tp); sintm, costm = sincos(tm)
-        dbtt = (bt_prc_q(r, sintp, costp) - bt_prc_q(r, sintm, costm)) / dd
         bx = sint * (br + (br + r * dbrr + dbtt) * sphi^2) + cost * bt
         by = -sint * sphi * cphi * (br + r * dbrr + dbtt)
         bz = (br * cost - bt * sint) * cphi
     else
-        st, ct = ds, z < 0.0 ? -dc : dc
-        theta = atan(st, ct); tp, tm = theta + d, theta - d
-        sintp, costp = sincos(tp); sintm, costm = sincos(tm)
-        br, bt = br_prc_q(r, st, ct), bt_prc_q(r, st, ct)
-        dbrr = (br_prc_q(rp, st, ct) - br_prc_q(rm, st, ct)) / dd
-        dbtt = (bt_prc_q(r, sintp, costp) - bt_prc_q(r, sintm, costm)) / dd
         fcxy = r * dbrr + dbtt
         bx = (br * (x^2 + 2.0 * y^2) + fcxy * y^2) / (r * st)^2 + bt * cost
         by = -(br + fcxy) * x * y / (r * st)^2
