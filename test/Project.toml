@@ -10,5 +10,5 @@ TsyganenkoModels = "14dfbe45-703c-4bf3-b096-15691adbb981"
 [compat]
 Aqua = "0.8"
 Chairmarks = "1"
-GeoCotrans = "0.2, 0.3"
+GeoCotrans = "0.2.2, 0.3"
 OrdinaryDiffEqTsit5 = "2"

@@ -2,9 +2,8 @@ module TsyganenkoModels
 
 using Dates: AbstractTime
 using GeoCotrans
-using GeoCotrans: ExternalFieldModel, CompositeFieldModel, GSM, Cartesian3
+using GeoCotrans: ExternalFieldModel, CompositeFieldModel, GSM, Cartesian3, dipole_tilt
 import GeoCotrans: evalmodel, getcsys, evaluate_model
-using LinearAlgebra: dot
 export t89, t96, t01, ts04, dipole_tilt
 export T89, T96, T01, TS04, TsyIGRF, IGRF
 
