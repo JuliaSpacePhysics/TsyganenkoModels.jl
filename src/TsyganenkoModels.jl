@@ -6,6 +6,7 @@ using GeoCotrans: ExternalFieldModel, CompositeFieldModel, GSM, Cartesian3, dipo
 import GeoCotrans: evalmodel, getcsys, evaluate_model
 export t89, t96, t01, ts04, dipole_tilt
 export T89, T96, T01, TS04, TsyIGRF, IGRF
+export Driven
 
 export getcsys, GSM, GEO
 
@@ -21,6 +22,7 @@ include("t96.jl")
 include("t01.jl")
 include("ts04.jl")
 include("composition.jl")
+include("driven.jl")
 
 for f in (:t89, :t96, :t01, :ts04)
     @eval $f(x, y, z, t::AbstractTime, args...; kw...) = $f(x, y, z, dipole_tilt(t), args...; kw...)
