@@ -12,9 +12,16 @@ Bumper = "8ce10254-0962-460f-a3d8-1f77fea1446e"
 Dates = "ade2ca70-3891-5945-98fb-dc099432e06a"
 GeoCotrans = "4624b3bc-fe35-44f8-bfa8-722ff9c0e307"
 
+[weakdeps]
+CDAWeb = "950ff2a9-823f-469c-91a7-754a5d85edca"
+
+[extensions]
+TsyganenkoModelsCDAWebExt = "CDAWeb"
+
 [compat]
 Bessels = "0.2"
 Bumper = "0.7"
+CDAWeb = "0.3"
 Dates = "1"
 GeoCotrans = "0.2.2, 0.3"
 julia = "1.10"

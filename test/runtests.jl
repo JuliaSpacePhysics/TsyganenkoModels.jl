@@ -98,3 +98,44 @@ end
         @test footpoint ≈ footpoints[name] rtol = 1.0e-2
     end
 end
+
+@testset "Driven models" begin
+    using Dates
+    using TsyganenkoModels: inputs, fill_gaps!, t01_g, ts05_w
+    t = DateTime(2001, 1, 1, 2, 3, 4)
+    r = GSM(-5.1, 0.3, 2.8)
+    param = (; pdyn = 2.0, dst = -87.0, byimf = 2.0, bzimf = -5.0)
+    @test TsyIGRF(Driven(T96, _ -> param))(r, t) == TsyIGRF(T96(param))(r, t)
+
+    x = [NaN, 1.0, NaN, NaN, 4.0, NaN, NaN, NaN, 8.0, NaN]
+    @test isequal(fill_gaps!(x; maxgap = 2), [NaN, 1, 2, 3, 4, NaN, NaN, NaN, 8, NaN])
+
+    # Tsyganenko (2002b) §3.1: V = 400 km/s, By = 0, Bz = -5 nT gives G1 ≈ 6, G2 = 10
+    n = 4000
+    v, by, bz = fill(400.0, n), zeros(n), fill(-5.0, n)
+    @test collect(t01_g(v, by, bz, n)) ≈ [400 * 0.125^2 / 1.125, 10]
+
+    # Driving functions S_k = 1 (density 5/1.16, 400 km/s, Bs = 5 nT) held steady: W_k → 1
+    den = fill(5 / 1.16, n)
+    @test all(w -> isapprox(w, 1; rtol = 0.05), ts05_w(den, v, bz)[n])
+    # Memory carries across a gap: a missing sample counts as no driving
+    gappy, northward = copy(bz), copy(bz)
+    gappy[n - 100] = NaN
+    northward[n - 100] = 1
+    w = ts05_w(den, v, gappy)
+    @test w[n] == ts05_w(den, v, northward)[n]
+    @test all(isnan, w[n - 100])
+end
+
+@testset "OMNI-driven models" begin
+    using CDAWeb, Dates
+    using TsyganenkoModels: inputs
+    t = DateTime(2017, 9, 8, 12, 2)  # Kp = 8- storm
+    @test inputs(Driven(T89), t).iopt == 7
+    r = (-5.1, 0.3, 2.8)
+    for M in (T96, T01, TS04)
+        m = Driven(M)
+        @test m(r, t) == M(inputs(m, t))(r, dipole_tilt(t))
+    end
+    @test_throws ArgumentError inputs(Driven(T96), DateTime(1960))
+end

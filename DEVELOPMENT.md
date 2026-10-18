@@ -7,6 +7,7 @@ TsyganenkoModels.jl/
 │   ├── TsyganenkoModels.jl     # Module root; exports T89–TS04, TsyIGRF, IGRF, dipole_tilt
 │   ├── models.jl               # Abstract type TsyganenkoModel; struct defs T89/T96/T01/TS04
 │   ├── composition.jl          # TsyIGRF = IGRF + Tsyganenko, evaluate_model dispatch
+│   ├── driven.jl               # Driven: parameters from a time-dependent source; T01 G and TS05 W drivers
 │   │
 │   ├── t89.jl / t96.jl / t01.jl / ts04.jl    # Model entry points; functor (m::T01)(x,y,z,ps)
 │   ├── t01_funcs.jl / ts04_funcs.jl           # extall() — assemble all field components
@@ -23,6 +24,7 @@ TsyganenkoModels.jl/
 │   ├── runtests.jl             # Aqua, dipole_tilt, all 4 models, field-line tracing
 │   └── test_geopack.jl         # Cross-validation vs Python geopack
 │
+├── ext/TsyganenkoModelsCDAWebExt.jl  # OMNI() source: fetches and caches OMNI per day
 ├── lib/Geopack.jl/             # Julia wrapper for Python geopack (reference)
 
 ---

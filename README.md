@@ -28,6 +28,18 @@ B_ts04 = TS04(param)(𝐫, ps)
 TsyIGRF()(𝐫, t)
 ```
 
+### Parameters from data
+
+`Driven(M)` sets the parameters of model `M` at each evaluation time from OMNI (requires `using CDAWeb`); see `@doc TsyganenkoModels.OMNI` for how each input is derived.
+
+```julia
+using CDAWeb
+t = DateTime("2017-09-08T12:00")
+TsyIGRF(Driven(TS04))(𝐫, t)                # TS04 with Pdyn, SYM-H, IMF and W1–W6 at t
+TsyganenkoModels.inputs(Driven(TS04), t)  # the parameters used
+Driven(T96, t -> (; pdyn = 2.0, dst = -10.0, byimf = 0.0, bzimf = -2.0))  # any source: a function of time
+```
+
 ## Features and Roadmap
 
 - Magnetic field model
