@@ -2,7 +2,7 @@ module TsyganenkoModelsCDAWebExt
 
 using CDAWeb: CDAWeb, getdata, times
 using Dates
-using TsyganenkoModels: TsyganenkoModels, OMNI, T89, T96, T01, TS04, fill_gaps!, t01_g, ts05_w, TS05_R
+using TsyganenkoModels: TsyganenkoModels, OMNI, T89, T96, T01, TS04, fill_gaps!, hourly_mean, t01_g, ts05_w, TS05_R
 
 const STEP = Minute(5)
 const PER_DAY = 288
@@ -16,6 +16,7 @@ struct OMNIDay
     symh::Vector{Float64}
     by::Vector{Float64}
     bz::Vector{Float64}
+    sw_hourly::Vector{NTuple{3, Float64}}  # pdyn, by, bz per UT hour
     g::Vector{NTuple{2, Float64}}
     w::Vector{NTuple{6, Float64}}
     kp::Vector{Float64}
@@ -43,10 +44,12 @@ function OMNIDay(day::Date)
     den, v, by, bz, symh = map(("proton_density", "flow_speed", "BY_GSM", "BZ_GSM", "SYM_H")) do name
         fill_gaps!(_series(hro, name, t0, n, STEP))
     end
+    pdyn = @. 1.937e-6 * den * v^2  # 1.16 mₚ in nPa per (cm⁻³ (km/s)²), Tsyganenko's value
     idx = NBEFORE .+ (1:PER_DAY)
     hourly = CDAWeb.Dataset("OMNI2_H0_MRG1HR")
     return OMNIDay(
-        @.(1.937e-6 * den[idx] * v[idx]^2), symh[idx], by[idx], bz[idx],  # 1.16 mₚ in nPa per (cm⁻³ (km/s)²), Tsyganenko's value
+        pdyn[idx], symh[idx], by[idx], bz[idx],
+        [map(x -> hourly_mean(x, NBEFORE + 12h), (pdyn, by, bz)) for h in 1:24],
         [t01_g(v, by, bz, i) for i in idx],
         ts05_w(den, v, bz)[idx],
         _series(hourly, "KP", DateTime(day), 24, Hour(1)),
@@ -77,8 +80,9 @@ function TsyganenkoModels.inputs(::OMNI, ::Type{<:T89}, t)
 end
 
 function TsyganenkoModels.inputs(::OMNI, ::Type{<:T96}, t)
-    d, i, h, t = _sample(t)
-    return _checked((; pdyn = d.pdyn[i], dst = d.dst[h], byimf = d.by[i], bzimf = d.bz[i]), t)
+    d, _, h, t = _sample(t)
+    pdyn, byimf, bzimf = d.sw_hourly[h]
+    return _checked((; pdyn, dst = d.dst[h], byimf, bzimf), t)
 end
 
 function TsyganenkoModels.inputs(::OMNI, ::Type{<:T01}, t)

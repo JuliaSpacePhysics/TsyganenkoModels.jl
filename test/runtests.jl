@@ -101,7 +101,7 @@ end
 
 @testset "Driven models" begin
     using Dates
-    using TsyganenkoModels: inputs, fill_gaps!, t01_g, ts05_w
+    using TsyganenkoModels: fill_gaps!, hourly_mean, t01_g, ts05_w
     t = DateTime(2001, 1, 1, 2, 3, 4)
     r = GSM(-5.1, 0.3, 2.8)
     param = (; pdyn = 2.0, dst = -87.0, byimf = 2.0, bzimf = -5.0)
@@ -109,6 +109,8 @@ end
 
     x = [NaN, 1.0, NaN, NaN, 4.0, NaN, NaN, NaN, 8.0, NaN]
     @test isequal(fill_gaps!(x; maxgap = 2), [NaN, 1, 2, 3, 4, NaN, NaN, NaN, 8, NaN])
+
+    @test hourly_mean([100.0; 1:10; NaN; 50.0], 13) == 105 / 11
 
     # Tsyganenko (2002b) §3.1: V = 400 km/s, By = 0, Bz = -5 nT gives G1 ≈ 6, G2 = 10
     n = 4000
