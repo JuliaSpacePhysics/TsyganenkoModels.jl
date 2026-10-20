@@ -22,8 +22,9 @@ evalmodel(m::Driven{M}, x, y, z, t) where {M} = evalmodel(M(inputs(m, t)), x, y,
 Parameters from 5-min (and, for Kp and Dst, hourly) OMNI data:
 
 - `pdyn = ρV²` with `ρ = 1.16 mₚN` (He/H = 0.04); gaps of at most 3 hours linearly interpolated, as Tsyganenko prepares TS05 inputs.
-- `T89`: `iopt` from Kp. `T96`: hourly Dst. `T01`, `TS04`: SYM-H as `dst`, the index their fits used.
-- `T01`: `g1`, `g2` averaged over the valid samples in the hour ending at the 5-min sample containing `t`.
+- `T89`: `iopt` from Kp. `T01`, `TS04`: SYM-H as `dst`, the index their fits used.
+- `T96`: Dst and the means of the valid `pdyn`, `byimf`, `bzimf` samples over the UT hour containing `t`, as its fit tagged each field average with the concurrent hourly OMNI values ([Tsyganenko, 1996](https://ui.adsabs.harvard.edu/abs/1996ESASP.389..181T); [Tsyganenko, 2002b, ¶6](https://doi.org/10.1029/2001JA000220)).
+- `T01`: other inputs at the 5-min sample containing `t`, the resolution of its fit, and `g1`, `g2` averaged over the valid samples in the hour ending there.
 - `TS04`: `w1`–`w6` accumulated from 13 days before `t`, when the slowest memory (W3) has decayed below `e⁻¹⁰`; samples in unfilled gaps contribute nothing. Tsyganenko's yearly files instead restart the sums after each gap at the first 2-hour quiet period, and on January 1, discarding the decayed memory of earlier driving that the exponential kernel models.
 """
 struct OMNI end
@@ -46,6 +47,17 @@ function fill_gaps!(x; maxgap = 35)
         end
         i = k
     end
+end
+
+# Mean of the valid samples among the 12 5-min samples ending at sample `i`, NaN if none
+function hourly_mean(x, i)
+    s, n = 0.0, 0
+    for j in (i - 11):i
+        isnan(x[j]) && continue
+        s += x[j]
+        n += 1
+    end
+    return s / n
 end
 
 # T01 (G1, G2) at sample `i` of 5-min series of solar wind speed `v` [km/s] and IMF `by`, `bz` (GSM) [nT].
