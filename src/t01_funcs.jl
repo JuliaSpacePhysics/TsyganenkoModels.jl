@@ -21,7 +21,7 @@ function t01_extall(pdyn, dst, byimf, bzimf, g1, g2, ps, x, y, z)
         _birk_amp(c) = c.c + c.g2 * g2
         _rc_amp(c) = c.c + c.dst * dst + c.sqp * sqrt(pdyn)
 
-        bcf = shlcar3x3(xx, yy, zz, ps)
+        bcf = dipole_shield(xx, yy, zz, ps)
         # Tail
         state = (;
             dxshift1 = c.dxshift.c + c.dxshift.g2 * g2,

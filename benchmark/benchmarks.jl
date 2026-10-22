@@ -34,10 +34,10 @@ components["birk_tot"] = @benchmarkable TsyganenkoModels.birk_tot($ps, $x, $y, $
 # Tail: deformed current sheet (two modes)
 const tail_state = (; dxshift1 = 4.0, dxshift2 = 0.0, d = 3.0, deltady = 2.0, g = 28.2)
 components["deformed"] = @benchmarkable TsyganenkoModels.deformed($ps, $x, $y, $z, 9.0, $tail_state)
-components["shlcar5x5"] = @benchmarkable TsyganenkoModels.shlcar5x5(TsyganenkoModels.TAIL_A1, $x, $y, $z, 4.0)
+components["tail_shield"] = @benchmarkable TsyganenkoModels.tail_shield(TsyganenkoModels.TAIL_A1, $x, $y, $z, 4.0)
 
 # Dipole shielding
-components["shlcar3x3"] = @benchmarkable TsyganenkoModels.shlcar3x3($x, $y, $z, $ps)
+components["dipole_shield"] = @benchmarkable TsyganenkoModels.dipole_shield($x, $y, $z, $ps)
 
 # ── Numerical kernels ──────────────────────────────────────────────────────────
 kernels = SUITE["kernels"] = BenchmarkGroup()

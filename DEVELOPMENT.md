@@ -16,7 +16,7 @@ TsyganenkoModels.jl/
 │   ├── ring_current.jl         # full_rc, src_prc, ap_rc/apprc, rc_shield — C_SY, C_PR
 │   ├── Birkeland_current.jl    # birk_tot, one_cone, birk_shl — SH coefficient matrices
 │   ├── tail.jl                 # deformed, warped, taildisk — TAIL_A1/A2, TAIL_F/B/C
-│   ├── dipole.jl               # dipole_tilt, dipole, shlcar3x3 — SHLCAR_A
+│   ├── dipole.jl               # dipole_tilt, dipole, dipole_shield — SHLCAR_A
 │   ├── helpers.jl              # _switch (magnetopause boundary logic)
 │   └── dual.jl                 # Minimal forward-mode Dual for the r/θ Jacobians in _rc_symm, prc_quad, one_cone
 │
@@ -33,7 +33,7 @@ Data Flow
 User call: model(x, y, z, ps)
     └─ evalmodel(m::T01, ...) → t01(x,y,z,ps,params)
         └─ t01_extall(...)
-            ├─ shlcar3x3()          # Chapman-Ferraro (magnetopause currents)
+            ├─ dipole_shield()          # Chapman-Ferraro (magnetopause currents)
             ├─ deformed()           # Tail current sheet
             ├─ birk_tot()           # Birkeland (Region 1 & 2)
             ├─ full_rc()            # Ring current ← ring_current.jl
@@ -46,14 +46,14 @@ Key Design Patterns
 
 - Functor interface — (m::T01)(x, y, z, ps) dispatches to evalmodel, then the raw function
 - _switch — smooth magnetopause boundary: inside → full model, outside → just IMF penetration
-- Component functions shared across T01/TS04: full_rc, birk_tot, deformed, shlcar3x3 all live in the parent module and are imported
+- Component functions shared across T01/TS04: full_rc, birk_tot, deformed, dipole_shield all live in the parent module and are imported
 - ring_current.jl is the most complex component — the only one with both a symmetric solver (_rc_symm via dual-number gradient of Aφ) and a shielding field (rc_shield with 86-element coefficient vectors)
 
 ## Findings by Category
 
 ### Design
 
-Four implementations of the same harmonic shielding pattern: birk_shl, rc_shield, shlcar3x3, shlcar5x5 all implement "exponential decay × trig in y × trig in z, tilted, coefficient-weighted". They differ in grid size (3×3, 5×5, 2×3×3×2×2), basis type, and whether sps multiplies the second sum. Conceptually the same family — auditing one tells you nothing about the others.
+Four implementations of the same harmonic shielding pattern: birk_shl, rc_shield, dipole_shield, tail_shield all implement "exponential decay × trig in y × trig in z, tilted, coefficient-weighted". They differ in grid size (3×3, 5×5, 2×3×3×2×2), basis type, and whether sps multiplies the second sum. Conceptually the same family — auditing one tells you nothing about the others.
 
 ### Performance
 
@@ -67,7 +67,7 @@ for ...
     l += 1; bx += a[l] * ...
 If loop order ever changes, all indices silently shift.
 
-shlcar3x3 has a silent special case at k=3 (lines 83–88 of dipole.jl) using a different basis formula with no comment ferent type of harmonic basis function — worth one line.
+dipole_shield has a silent special case at k=3 (lines 83–88 of dipole.jl) using a different basis formula with no comment ferent type of harmonic basis function — worth one line.
 
 birk_1n2's phi convention uses atan(-zsc, xsc) (note the minus) — solar magnetic coordinates have z→-z relative to GSM
 
@@ -89,7 +89,7 @@ apprc:107-108 — two lines of chained arithmetic longer than the screen. Each c
 
 TS04 supersedes T01 with improved storm-time dynamics.
 Many sub-functions are identical and shared: birk_tot, full_rc, dipole,
-deformed, shlcar3x3, warped, unwarped, taildisk, shlcar5x5.
+deformed, dipole_shield, warped, unwarped, taildisk, tail_shield.
 Key Differences:
 
 

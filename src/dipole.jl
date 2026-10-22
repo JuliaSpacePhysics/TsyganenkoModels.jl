@@ -33,7 +33,7 @@ end
 
 # This subroutine returns the shielding field for the earth's dipole, represented by
 # 2x3x3=18 "cartesian" harmonics, tilted with respect to the z=0 plane
-function shlcar3x3(x, y, z, ps)
+function dipole_shield(x, y, z, ps)
     a = SHLCAR_A
     p1, p2, p3 = a[37], a[38], a[39]
     r1, r2, r3 = a[40], a[41], a[42]
@@ -107,7 +107,7 @@ function shlcar3x3(x, y, z, ps)
     return bx, by, bz
 end
 
-# shlcar3x3 coefficients (50 elements)
+# dipole_shield coefficients (50 elements)
 const SHLCAR_A = [
     -901.2327248, 895.8011176, 817.6208321, -845.5880889, -83.73539535,
     86.58542841, 336.8781402, -329.3619944, -311.294712, 308.6011161,

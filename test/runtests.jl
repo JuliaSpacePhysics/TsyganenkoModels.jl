@@ -58,7 +58,7 @@ end
     @test collect(TsyganenkoModels.birk1tot_02(1, 2, 3, -0.46)) ≈ [-4.138521384351386, 1.7274528180037634, -1.957000062050696]
 
     ps = -0.46049650108726486
-    @test collect(TsyganenkoModels.shlcar3x3(1, 2, 3, ps)) ≈ [-6.624367426893622, 0.5530405783442072, 19.261862546642284]
+    @test collect(TsyganenkoModels.dipole_shield(1, 2, 3, ps)) ≈ [-6.624367426893622, 0.5530405783442072, 19.261862546642284]
 
     @test collect(TsyganenkoModels.rc_symm(0, 0, 1)) ≈ [0.0, 0.0, -15.875017940770613] rtol = 1.0e-6
     @test collect(TsyganenkoModels.prc_quad(0, 0, 1)) ≈ [-38.33420080986639, 0.0, 0.0] rtol = 1.0e-6

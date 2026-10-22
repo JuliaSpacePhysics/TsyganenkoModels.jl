@@ -106,7 +106,7 @@ function unwarped(x, y, z, state)
     d0sc1 = state.d * alpha1
 
     f1 = taildisk(d0sc1, deltadx1, state.deltady, xsc1, ysc1, zsc1)
-    h1 = shlcar5x5(TAIL_A1, x, y, z, dxshift1)
+    h1 = tail_shield(TAIL_A1, x, y, z, dxshift1)
     b1 = f1 .+ h1
 
     # Mode 2
@@ -116,7 +116,7 @@ function unwarped(x, y, z, state)
     d0sc2 = state.d * alpha2
 
     f2 = taildisk(d0sc2, deltadx2, state.deltady, xsc2, ysc2, zsc2)
-    h2 = shlcar5x5(TAIL_A2, x, y, z, state.dxshift2)
+    h2 = tail_shield(TAIL_A2, x, y, z, state.dxshift2)
     b2 = f2 .+ h2
     return b1, b2
 end
@@ -165,7 +165,7 @@ function taildisk(d0, deltadx, deltady, x, y, z)
     return dbx, dby, dbz
 end
 
-function shlcar5x5(a, x, y, z, dshift)
+function tail_shield(a, x, y, z, dshift)
     dhx, dhy, dhz = 0.0, 0.0, 0.0
     @inbounds for i in 1:5
         rp = 1.0 / a[50 + i]

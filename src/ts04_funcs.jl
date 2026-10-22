@@ -23,7 +23,7 @@ function ts04_extall(pdyn, dst, byimf, bzimf, w1, w2, w3, w4, w5, w6, ps, x, y, 
 
         ws = c.w_sat
 
-        bcf = shlcar3x3(xx, yy, zz, ps)
+        bcf = dipole_shield(xx, yy, zz, ps)
 
         # Tail (dst-dependent dxshift, w1-dependent thickness)
         znam_tail = abs(min(dst, -20.0))^0.37
