@@ -3,13 +3,11 @@
 # Fixed constants
 const A02 = 25.0
 const XLW2 = 170.0
-const YN = 30.0
 const RT = 30.0
 const XD = 0.0
 const XLD2 = 40.0
 const SXC = 4.0
 const XLWC2 = 50.0
-const DXL = 20.0
 
 # Parameter array: 30 parameters × 7 Kp levels
 # Kp levels: 1=(0,0+), 2=(1-,1,1+), 3=(2-,2,2+), 4=(3-,3,3+), 5=(4-,4,4+), 6=(5-,5,5+), 7=(≥6-)
@@ -40,15 +38,13 @@ in the geomagnetosphere using the Tsyganenko 89 model, given the position `𝐫`
 """
 function t89(x, y, z, ps, iopt; cache = nothing)
     @assert 1 ≤ iopt ≤ 7 "iopt must be between 1 and 7"
-
-    # Get parameters for this Kp level
     if isnothing(cache) || cache.iopt != iopt
         cache = t89_init(iopt)
     end
     return GSM(_t89_compute(x, y, z, ps, cache))
 end
 
-evalmodel(m::T89, x, y, z, ps) = t89(x, y, z, ps, m.iopt; cache = m.cache)
+evalmodel(m::T89, x, y, z, ps::Real) = GSM(_t89_compute(x, y, z, ps, m.cache))
 
 function t89_init(iopt::Int)
     # Extract parameters for this Kp level
@@ -68,15 +64,10 @@ function t89_init(iopt::Int)
     DYC = A[30]
     DT = D0
 
-    # Precompute constants
-    DYC2 = DYC^2
     HA02 = 0.5 * A02
-    RDX2M = -1.0 / DX^2
-    RDX2 = -RDX2M
-    RDYC2 = 1.0 / DYC2
+    RDYC2 = 1.0 / DYC^2
     HLWC2M = -0.5 * XLWC2
     DRDYC2 = -2.0 * RDYC2
-    DRDYC3 = 2.0 * RDYC2 * sqrt(RDYC2)
     HXLW2M = -0.5 * XLW2
     HXLD2M = -0.5 * XLD2
     W1 = -0.5 / DX
@@ -85,11 +76,6 @@ function t89_init(iopt::Int)
     W3 = W4 / DX
     W5 = -0.5
     W6 = -3.0
-    RDXL = 1.0 / DXL
-    HRDXL = 0.5 * RDXL
-    A6H = AK6 * 0.5
-    A9T = AK9 / 3.0
-    YNP = 1 / π / YN * 0.5
 
     AK610 = AK6 * W1 + AK10 * W5
     AK711 = AK7 * W2 - AK11
@@ -100,9 +86,8 @@ function t89_init(iopt::Int)
         iopt,
         AK1, AK2, AK3, AK4, AK5, AK6, AK7, AK8, AK9, AK10,
         AK11, AK12, AK13, AK14, AK15, AK16, AK17,
-        DX, ADR, D0, DD, RC, G, AT, DT, DEL, P, Q, SX, GAM, DYC,
-        HA02, RDX2M, RDX2, RDYC2, HLWC2M, DRDYC2, DRDYC3, HXLW2M, HXLD2M, RDXL, HRDXL,
-        A6H, A9T, YNP, AK610, AK711, AK812, AK913
+        DX, ADR, D0, DD, RC, G, AT, DT, DEL, P, Q, SX, GAM,
+        HA02, RDYC2, HLWC2M, DRDYC2, HXLW2M, HXLD2M, AK610, AK711, AK812, AK913,
     )
 end
 

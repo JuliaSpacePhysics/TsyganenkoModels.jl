@@ -20,7 +20,6 @@ include("t96_consts.jl")
 Compute GSM components of the external magnetic field using the Tsyganenko 96 model.
 """
 function t96(x, y, z, ps, pdyn, dst, byimf, bzimf)
-    sps = sin(ps)
     depr = 0.8 * dst - 13.0 * sqrt(pdyn)
 
     bt = sqrt(byimf^2 + bzimf^2)
@@ -64,10 +63,10 @@ function t96(x, y, z, ps, pdyn, dst, byimf, bzimf)
 
     s0 = 1.08
     dsig = 0.005
-    out = _switch(sigma, s0, dsig, ps, x, y, z, oimf; q0 = 30574) do
+    out = _switch(sigma, s0, dsig, ps, x, y, z, oimf; q0 = T96_DIPOLE_STRENGTH) do
         xx = x * xappa; yy = y * xappa; zz = z * xappa
         cf = dipshld(ps, xx, yy, zz)
-        brc, bt2, bt3 = tailrc96(sps, xx, yy, zz)
+        brc, bt2, bt3 = tailrc96(ps, xx, yy, zz)
         r1 = birk1tot_02(ps, xx, yy, zz)
         r2 = birk2tot_02(ps, xx, yy, zz)
         rimfx, rimfys, rimfzs = intercon(xx, ys * xappa, zs * xappa)
@@ -87,4 +86,4 @@ function _sigma(x, x0, am, rho2)
     return sqrt((aro + axx0 + sqrt((aro + axx0)^2 - 4 * asq * axx0)) / (2 * asq))
 end
 
-evalmodel(m::T96, x, y, z, ps) = t96(x, y, z, ps, m.pdyn, m.dst, m.byimf, m.bzimf)
+evalmodel(m::T96, x, y, z, ps::Real) = t96(x, y, z, ps, m.pdyn, m.dst, m.byimf, m.bzimf)

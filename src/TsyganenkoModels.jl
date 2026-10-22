@@ -32,6 +32,8 @@ for f in (:t89, :t96, :t01, :ts04)
     end
 end
 
+evalmodel(m::TsyganenkoModel, x, y, z, t::AbstractTime) = evalmodel(m, x, y, z, dipole_tilt(t))
+
 for T in (:T89, :T96, :T01, :TS04)
     # support namedtuple input
     @eval $T(nt::NamedTuple) = $T(; nt...)

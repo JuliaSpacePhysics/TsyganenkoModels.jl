@@ -24,4 +24,4 @@ function t01(x, y, z, ps, pdyn, dst, byimf, bzimf, g1 = 0.0, g2 = 0.0)
 end
 
 # Functor interfaces for T01
-evalmodel(m::T01, x, y, z, ps) = t01(x, y, z, ps, m.pdyn, m.dst, m.byimf, m.bzimf, m.g1, m.g2)
+evalmodel(m::T01, x, y, z, ps::Real) = t01(x, y, z, ps, m.pdyn, m.dst, m.byimf, m.bzimf, m.g1, m.g2)

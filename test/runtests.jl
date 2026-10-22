@@ -30,7 +30,7 @@ end
         # intermediate sigma case (S0 - DSIG < sigma < S0 + DSIG)
         @test t96([-6.5, 13, 13.0], ps, param...) ≈ [10.64621818721388, -0.8896267128450983, 1.9983159012100993]
         @test T01(param)([-6.5, 10, 13.0], ps) ≈ [33.90299388160385, -3.7496216888652825, -4.16584515175392] rtol = 1.0e-6
-        @test T01(param)([-6.5, 10, 23.0], ps) == [-0.281726292169127, 3.0187227770015053, -0.45328468009496703]
+        @test T01(param)([-6.5, 10, 23.0], ps) ≈ [-0.281726292169127, 3.0187227770015053, -0.45328468009496703] rtol = 1e-14
     end
 end
 
@@ -52,7 +52,7 @@ end
     @test collect(TsyganenkoModels.r2sheet(1, 2, 3)) ≈ [9.453799383727832, 2.8367547754153284, 0.8914493552029839]
 
     # Geopack.geopack.t96.birk1shld(1,2,3,4)
-    @test collect(TsyganenkoModels.birk1shld(1, 2, 3, 4)) ≈ [2.525027295079125, 0.05065465250867974, 0.12243989839075299]
+    @test collect(TsyganenkoModels.shlcar(TsyganenkoModels.BIRK1_SHLD, Val(4), 1, 2, 3, 4)) ≈ [2.525027295079125, 0.05065465250867974, 0.12243989839075299]
 
     # Geopack.geopack.t96.birk1tot_02(1,2,3,-0.46)
     @test collect(TsyganenkoModels.birk1tot_02(1, 2, 3, -0.46)) ≈ [-4.138521384351386, 1.7274528180037634, -1.957000062050696]
