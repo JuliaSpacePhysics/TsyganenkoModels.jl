@@ -48,9 +48,7 @@ function t89(x, y, z, ps, iopt; cache = nothing)
     return GSM(_t89_compute(x, y, z, ps, cache))
 end
 
-function evalmodel(m::T89, r, θ, φ, ps)
-    return t89(r, θ, φ, ps, m.iopt; cache = m.cache)
-end
+evalmodel(m::T89, x, y, z, ps) = t89(x, y, z, ps, m.iopt; cache = m.cache)
 
 function t89_init(iopt::Int)
     # Extract parameters for this Kp level

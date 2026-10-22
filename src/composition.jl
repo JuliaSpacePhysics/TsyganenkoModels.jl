@@ -14,10 +14,8 @@ Create a composite Earth magnetic field model combining internal IGRF and extern
 ```julia
 model = TsyIGRF(T89(iopt=3))
 
-# Evaluate at position (in Earth radii, spherical coordinates)
-r, θ, φ = 6.6, π/2, 0.0  # 6.6 RE at equator
-t = Date(2020, 6, 21)    # Summer solstice 2020
-B = model(r, θ, φ, t)    # Returns B in spherical coordinates (Br, Bθ, Bφ) in nT
+t = Date(2020, 6, 21)  # Summer solstice 2020
+B = model(6.6, 0.0, 0.0, t)  # GSM (x, y, z) [Re] -> (Bx, By, Bz) [nT]
 ```
 """
 function TsyIGRF(model = T89(iopt = 3); name = nothing)
