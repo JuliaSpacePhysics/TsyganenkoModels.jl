@@ -166,24 +166,7 @@ function taildisk(d0, deltadx, deltady, x, y, z)
 end
 
 function tail_shield(a, x, y, z, dshift)
-    dhx, dhy, dhz = 0.0, 0.0, 0.0
-    @inbounds for i in 1:5
-        rp = 1.0 / a[50 + i]
-        sypi, cypi = sincos(y * rp)
-        for k in 1:5
-            rr = 1.0 / a[55 + k]
-            szrk, czrk = sincos(z * rr)
-            sqpr = sqrt(rp^2 + rr^2)
-            epr = exp(x * sqpr)
-            dbx = -sqpr * epr * cypi * szrk
-            dby = rp * epr * sypi * szrk
-            dbz = -rr * epr * cypi * czrk
-            l = 5 * (i - 1) + k
-            coef = a[2 * l - 1] + a[2 * l] * dshift
-            dhx += coef * dbx
-            dhy += coef * dby
-            dhz += coef * dbz
-        end
-    end
-    return dhx, dhy, dhz
+    p = ntuple(i -> a[50 + i], 5)
+    r = ntuple(i -> a[55 + i], 5)
+    return cartharm((i, k) -> a[10i + 2k - 11] + a[10i + 2k - 10] * dshift, p, r, x, y, z, false)
 end

@@ -67,4 +67,3 @@ A Julia wrapper for [`geopack`](https://github.com/tsssss/geopack) is available 
 [![DOI](https://zenodo.org/badge/1139356853.svg)](https://doi.org/10.5281/zenodo.18435633)
 [![version](https://juliahub.com/docs/General/TsyganenkoModels/stable/version.svg)](https://juliahub.com/ui/Packages/General/TsyganenkoModels)
 ![PyPI - Version](https://img.shields.io/pypi/v/tsyganenkomodels-jl)
-[![Coverage](https://codecov.io/gh/JuliaSpacePhysics/TsyganenkoModels.jl/branch/main/graph/badge.svg)](https://codecov.io/gh/JuliaSpacePhysics/TsyganenkoModels.jl)

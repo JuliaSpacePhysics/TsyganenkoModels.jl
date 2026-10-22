@@ -32,9 +32,10 @@ rc_symm(x, y, z) = _rc_symm(ap_rc, x, y, z)
 @fastmath function _vector_potential(alpha_s, gammas, a1, rrc1, dd1, a2, rrc2, dd2)
     gammas2 = gammas^2; alsqh = alpha_s^2 / 2.0
     f = 64.0 / 27.0 * gammas2 + alsqh^2
-    q = (sqrt(f) + alsqh)^(1.0 / 3.0)
-    c = max(q - 4.0 * gammas2^(1.0 / 3.0) / (3.0 * q), 0.0)
-    g = sqrt(c^2 + 4.0 * gammas2^(1.0 / 3.0))
+    q = cbrt(sqrt(f) + alsqh)
+    g3 = cbrt(gammas2)
+    c = max(q - 4.0 * g3 / (3.0 * q), 0.0)
+    g = sqrt(c^2 + 4.0 * g3)
     rs = 4.0 / ((sqrt(2.0 * g - c) + sqrt(c)) * (g + c))
     costs, sints = gammas * rs^2, sqrt(1.0 - (gammas * rs^2)^2)
     rhos, zs = rs * sints, rs * costs
@@ -187,48 +188,22 @@ end
     return sum(a .* (d1, d2, d3, d4, d5, d6, d7, d8, d9, d10, d11, d12, d13, d14, d15, d16, d17))
 end
 
+# 2×9 tilted Cartesian harmonics (see `cartharm`) whose amplitudes are linear in the scale
+# factor `x_sc` and in a tilt function: four coefficients per harmonic.
 function _harmonic_shield(a, ps, x_sc, x, y, z, scale)
     sps, cps = sincos(ps)
-    s3ps = 2.0 * cps
-    pst1, pst2 = ps * a[85], ps * a[86]
-    st1, ct1 = sincos(pst1)
-    st2, ct2 = sincos(pst2)
-    x1, z1 = x * ct1 - z * st1, x * st1 + z * ct1
-    x2, z2 = x * ct2 - z * st2, x * st2 + z * ct2
-    bx, by, bz = 0.0, 0.0, 0.0
-    @inbounds for m in 1:2, i in 1:3
-        p, q = a[72 + i], a[78 + i]
-        sypi, cypi = sincos(y / p)
-        syqi, cyqi = sincos(y / q)
-        for k in 1:3
-            r, s = a[75 + k], a[81 + k]
-            szrk, czrk = sincos(z1 / r)
-            szsk, czsk = sincos(z2 / s)
-            sqpr, sqqs = sqrt(1.0 / p^2 + 1.0 / r^2), sqrt(1.0 / q^2 + 1.0 / s^2)
-            epr, eqs = exp(x1 * sqpr), exp(x2 * sqqs)
-            for n in 1:2, nn in 1:2
-                if m == 1
-                    fx = -sqpr * epr * cypi * szrk * scale
-                    fy = epr * sypi * szrk / p * scale
-                    fz = -epr * cypi * czrk / r * scale
-                    mult = n == 1 ? (nn == 1 ? 1.0 : x_sc) : (nn == 1 ? cps : cps * x_sc)
-                else
-                    fx = -sps * sqqs * eqs * cyqi * czsk * scale
-                    fy = sps / q * eqs * syqi * czsk * scale
-                    fz = sps / s * eqs * cyqi * szsk * scale
-                    mult = n == 1 ? (nn == 1 ? 1.0 : x_sc) : (nn == 1 ? s3ps : s3ps * x_sc)
-                end
-                hx, hy, hz = fx * mult, fy * mult, fz * mult
-                ct, st = m == 1 ? (ct1, st1) : (ct2, st2)
-                hxr, hzr = hx * ct + hz * st, -hx * st + hz * ct
-                coef_idx = (((m - 1) * 3 + (i - 1)) * 3 + (k - 1)) * 4 + (n - 1) * 2 + nn
-                bx += hxr * a[coef_idx]
-                by += hy * a[coef_idx]
-                bz += hzr * a[coef_idx]
-            end
-        end
+    p, r, q, s = (ntuple(i -> a[72 + 3j + i], 3) for j in 0:3)
+    coef(o, fψ) = (i, k) -> begin
+        l = o + 4 * (3 * (i - 1) + k - 1)
+        a[l + 1] + a[l + 2] * x_sc + (a[l + 3] + a[l + 4] * x_sc) * fψ
     end
-    return bx, by, bz
+    b1 = tilted(ps * a[85], x, y, z) do x, y, z
+        cartharm(coef(0, cps), p, r, x, y, z, false)
+    end
+    b2 = tilted(ps * a[86], x, y, z) do x, y, z
+        cartharm(coef(36, 2cps), q, s, x, y, z, true)
+    end
+    return @. scale * (b1 + sps * b2)
 end
 
 rc_shield(a, ps, x_sc, x, y, z) = _harmonic_shield(a, ps, x_sc, x, y, z, (x_sc + 1.0)^3)

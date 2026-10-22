@@ -1,4 +1,3 @@
-using Bumper
 using Bessels: besselj0, besselj1
 
 function dipshld(ps, x, y, z)
@@ -86,99 +85,31 @@ end
 
 # Calculates the potential interconnection field inside the magnetosphere, corresponding to
 # DELTA_X = 20Re and DELTA_Y = 10Re (NB#3, p.90, 6/6/1996).
-@views function intercon(x, y, z)
+function intercon(x, y, z)
     a = INTERCON_A
-
-    p = NTuple{3}(a[10:12])
-    r = NTuple{3}(a[13:15])
-    rp = 1.0 ./ p
-    rr = 1.0 ./ r
-
-    bx = 0.0
-    by = 0.0
-    bz = 0.0
-    l = 1
-    for i in 1:3
-        sypi, cypi = sincos(y * rp[i])
-        for k in 1:3
-            szrk, czrk = sincos(z * rr[k])
-            sqpr = sqrt(rp[i]^2 + rr[k]^2)
-            epr = exp(x * sqpr)
-            hx = -sqpr * epr * cypi * szrk
-            hy = rp[i] * epr * sypi * szrk
-            hz = -rr[k] * epr * cypi * czrk
-            bx += a[l] * hx
-            by += a[l] * hy
-            bz += a[l] * hz
-            l += 1
-        end
-    end
-    return bx, by, bz
+    p = ntuple(i -> a[9 + i], 3)
+    r = ntuple(i -> a[12 + i], 3)
+    return cartharm((i, k) -> a[3i + k - 3], p, r, x, y, z, false)
 end
 
-function shlcar3x3(a, x, y, z, sps)
-    cps = sqrt(1 - sps^2)
+# Shielding field of N² perpendicular + N² parallel Cartesian harmonics (see `cartharm`) at
+# dipole tilt `ps`. `a` holds 4N² coefficients — a pair (a₀, a₁) per harmonic, perpendicular
+# first — followed by the N-vectors p, r (perpendicular) and q, s (parallel) of wavelengths.
+# Tilt enters as a₀ + a₁cosψ for perpendicular terms and sinψ(a₀ + a₁(4cos²ψ - 1)) for parallel
+# ones, so the parallel part vanishes at zero tilt.
+function shlcar(a, ::Val{N}, ps, x, y, z) where {N}
+    sps, cps = sincos(ps)
     s3ps = 4 * cps^2 - 1
-
-    hx = 0.0
-    hy = 0.0
-    hz = 0.0
-    l = 1
-    for m in 1:2
-        for i in 1:3
-            p = a[36 + i]
-            q = a[42 + i]
-            sypi, cypi = sincos(y / p)
-            syqi, cyqi = sincos(y / q)
-            for k in 1:3
-                r = a[39 + k]
-                s = a[45 + k]
-                szrk, czrk = sincos(z / r)
-                szsk, czsk = sincos(z / s)
-                sqpr = sqrt(1 / p^2 + 1 / r^2)
-                sqqs = sqrt(1 / q^2 + 1 / s^2)
-                epr = exp(x * sqpr)
-                eqs = exp(x * sqqs)
-                if m == 1
-                    dx = -sqpr * epr * cypi * szrk
-                    dy = epr / p * sypi * szrk
-                    dz = -epr / r * cypi * czrk
-                    hx += a[l] * dx
-                    hy += a[l] * dy
-                    hz += a[l] * dz
-                    l += 1
-
-                    dx *= cps
-                    dy *= cps
-                    dz *= cps
-                    hx += a[l] * dx
-                    hy += a[l] * dy
-                    hz += a[l] * dz
-                    l += 1
-                else
-                    dx = -sps * sqqs * eqs * cyqi * czsk
-                    dy = sps * eqs / q * syqi * czsk
-                    dz = sps * eqs / s * cyqi * szsk
-                    hx += a[l] * dx
-                    hy += a[l] * dy
-                    hz += a[l] * dz
-                    l += 1
-
-                    dx *= s3ps
-                    dy *= s3ps
-                    dz *= s3ps
-                    hx += a[l] * dx
-                    hy += a[l] * dy
-                    hz += a[l] * dz
-                    l += 1
-                end
-            end
-        end
-    end
-    return hx, hy, hz
+    o = 4 * N^2
+    p, r, q, s = (ntuple(i -> a[o + j * N + i], Val(N)) for j in 0:3)
+    l(i, k) = 2N * (i - 1) + 2k
+    b1 = cartharm((i, k) -> a[l(i, k) - 1] + a[l(i, k)] * cps, p, r, x, y, z, false)
+    b2 = cartharm((i, k) -> a[2N^2 + l(i, k) - 1] + a[2N^2 + l(i, k)] * s3ps, q, s, x, y, z, true)
+    return b1 .+ sps .* b2
 end
 
-function tailrc96(sps, x, y, z)
+function tailrc96(ps, x, y, z)
+    sps = sin(ps)
     rh, dr, g, d0, deltady = 9.0, 4.0, 10.0, 2.0, 10.0
     dr2 = dr^2
     c11 = sqrt((1 + rh)^2 + dr2)
@@ -227,10 +158,10 @@ function tailrc96(sps, x, y, z)
         zsww,
     )
 
-    brc = shlcar3x3(ARC_COEF, x, y, z, sps) .+ ringcurr96(x, y, z, warp_state)
-    bt2 = shlcar3x3(ATAIL2_COEF, x, y, z, sps) .+ taildisk(x, y, z, warp_state)
+    brc = shlcar(ARC_COEF, Val(3), ps, x, y, z) .+ ringcurr96(x, y, z, warp_state)
+    bt2 = shlcar(ATAIL2_COEF, Val(3), ps, x, y, z) .+ taildisk(x, y, z, warp_state)
     hx, hz = tail87(x, z, warp_state)
-    bt3 = shlcar3x3(ATAIL3_COEF, x, y, z, sps) .+ (hx, 0, hz)
+    bt3 = shlcar(ATAIL3_COEF, Val(3), ps, x, y, z) .+ (hx, 0, hz)
     return brc, bt2, bt3
 end
 
@@ -509,37 +440,8 @@ function birk1tot_02(ps, x, y, z)
         error("birk1tot_02: invalid region")
     end
 
-    b_diploop1 = if loc in (1, 3, 4)
-        @no_escape begin
-            d = @alloc(Float64, 3, 26)
-            diploop1!(d, x, y, z, ps, rh, dr)
-            _bx, _by, _bz = 0.0, 0.0, 0.0
-            for i in eachindex(BIRK1_C1)
-                _bx += BIRK1_C1[i] * d[1, i]
-                _by += BIRK1_C1[i] * d[2, i]
-                _bz += BIRK1_C1[i] * d[3, i]
-            end
-            _bx, _by, _bz
-        end
-    else
-        (0.0, 0.0, 0.0)
-    end
-
-    b_condip1 = if loc in (2, 3, 4)
-        @no_escape begin
-            d2 = @alloc(Float64, 3, 79)
-            condip1!(d2, x, y, z, ps)
-            _bx, _by, _bz = 0.0, 0.0, 0.0
-            for i in eachindex(BIRK1_C2)
-                _bx += BIRK1_C2[i] * d2[1, i]
-                _by += BIRK1_C2[i] * d2[2, i]
-                _bz += BIRK1_C2[i] * d2[3, i]
-            end
-            _bx, _by, _bz
-        end
-    else
-        (0.0, 0.0, 0.0)
-    end
+    b_diploop1 = loc in (1, 3, 4) ? diploop1(BIRK1_C1, x, y, z, ps, rh, dr) : (0.0, 0.0, 0.0)
+    b_condip1 = loc in (2, 3, 4) ? condip1(BIRK1_C2, x, y, z, ps) : (0.0, 0.0, 0.0)
 
     b = if loc == 1
         b_diploop1
@@ -593,10 +495,11 @@ function birk1tot_02(ps, x, y, z)
         @. b_condip1 * (1 - frac) + b_diploop1 * frac
     end
 
-    return b .+ birk1shld(ps, x, y, z)
+    return b .+ shlcar(BIRK1_SHLD, Val(4), ps, x, y, z)
 end
 
-function diploop1!(d, x, y, z, ps, rh, dr)
+function diploop1(coef, x, y, z, ps, rh, dr)
+    b = (0.0, 0.0, 0.0)
     sps = sin(ps)
 
     for i in 1:12
@@ -614,20 +517,11 @@ function diploop1!(d, x, y, z, ps, rh, dr)
         xd = (BIRK1_XX1[i] * BIRK1_DIPX) * cpsas
         yd = (BIRK1_YY1[i] * BIRK1_DIPY)
         zd = -(BIRK1_XX1[i] * BIRK1_DIPX) * spsas
-        bx1x, by1x, bz1x, bx1y, by1y, bz1y, bx1z, by1z, bz1z = dipxyz(x - xd, y - yd, z - zd)
+        m = (sps * coef[i + 12], 0, coef[i])
+        b = b .+ dipxyz(x - xd, y - yd, z - zd, m)
         if abs(yd) > 1.0e-10
-            bx2x, by2x, bz2x, bx2y, by2y, bz2y, bx2z, by2z, bz2z = dipxyz(x - xd, y + yd, z - zd)
-        else
-            bx2x = by2x = bz2x = 0.0
-            bx2y = by2y = bz2y = 0.0
-            bx2z = by2z = bz2z = 0.0
+            b = b .+ dipxyz(x - xd, y + yd, z - zd, m)
         end
-        d[1, i] = bx1z + bx2z
-        d[2, i] = by1z + by2z
-        d[3, i] = bz1z + bz2z
-        d[1, i + 12] = (bx1x + bx2x) * sps
-        d[2, i + 12] = (by1x + by2x) * sps
-        d[3, i + 12] = (bz1x + bz2x) * sps
     end
 
     r2 = (BIRK1_XCENTRE[1] + BIRK1_RADIUS[1])^2
@@ -645,9 +539,7 @@ function diploop1!(d, x, y, z, ps, rh, dr)
     yoct1 = y
     zoct1 = x * spsas + z * cpsas
     bxoct1, byoct1, bzoct1 = crosslp(xoct1, yoct1, zoct1, BIRK1_XCENTRE[1], BIRK1_RADIUS[1], BIRK1_TILT)
-    d[1, 25] = bxoct1 * cpsas + bzoct1 * spsas
-    d[2, 25] = byoct1
-    d[3, 25] = -bxoct1 * spsas + bzoct1 * cpsas
+    b = b .+ coef[25] .* (bxoct1 * cpsas + bzoct1 * spsas, byoct1, -bxoct1 * spsas + bzoct1 * cpsas)
 
     r2 = (BIRK1_RADIUS[2] - BIRK1_XCENTRE[2])^2
     r = sqrt(r2)
@@ -664,35 +556,11 @@ function diploop1!(d, x, y, z, ps, rh, dr)
     yoct2 = y
     zoct2 = x * spsas + z * cpsas
     bx, by, bz = circle(xoct2, yoct2, zoct2, BIRK1_RADIUS[2])
-    d[1, 26] = bx * cpsas + bz * spsas
-    d[2, 26] = by
-    d[3, 26] = -bx * spsas + bz * cpsas
+    b = b .+ coef[26] .* (bx * cpsas + bz * spsas, by, -bx * spsas + bz * cpsas)
 
-    return d
+    return b
 end
 
-function dipxyz(x, y, z)
-    x2 = x^2
-    y2 = y^2
-    z2 = z^2
-    r2 = x2 + y2 + z2
-
-    xmr5 = 30574 / (r2 * r2 * sqrt(r2))
-    xmr53 = 3 * xmr5
-    bxx = xmr5 * (3 * x2 - r2)
-    byx = xmr53 * x * y
-    bzx = xmr53 * x * z
-
-    bxy = byx
-    byy = xmr5 * (3 * y2 - r2)
-    bzy = xmr53 * y * z
-
-    bxz = bzx
-    byz = bzy
-    bzz = xmr5 * (3 * z2 - r2)
-
-    return bxx, byx, bzx, bxy, byy, bzy, bxz, byz, bzz
-end
 
 function crosslp(x, y, z, xc, rl, al)
     sal, cal = sincos(al)
@@ -738,7 +606,8 @@ function circle(x, y, z, rl)
     return bx, by, bz
 end
 
-function condip1!(d, x, y, z, ps)
+function condip1(coef, x, y, z, ps)
+    b = (0.0, 0.0, 0.0)
     sps, cps = sincos(ps)
 
     xsm = x * cps - z * sps - BIRK1_DX
@@ -776,14 +645,14 @@ function condip1!(d, x, y, z, ps)
         bxsm = bt * c * cf1 - bf * sf1
         by = bt * c * sf1 + bf * cf1
         bzsm = -bt * s
-        d[1, m] = bxsm * cps + bzsm * sps
-        d[2, m] = by
-        d[3, m] = -bxsm * sps + bzsm * cps
+        b = b .+ coef[m] .* (bxsm * cps + bzsm * sps, by, -bxsm * sps + bzsm * cps)
     end
 
     xsm = x * cps - z * sps
     zsm = z * cps + x * sps
 
+    # Reflected source moments enforce the y/z symmetries; tilt adds the complementary parity.
+    h = (0.0, 0.0, 0.0)
     for i in 1:9
         if i == 3 || i == 5 || i == 6
             xd = BIRK1_XX2[i] * BIRK1_SCALEIN
@@ -793,166 +662,34 @@ function condip1!(d, x, y, z, ps)
             yd = BIRK1_YY2[i] * BIRK1_SCALEOUT
         end
         zd = BIRK1_ZZ2[i]
-        bx1x, by1x, bz1x, bx1y, by1y, bz1y, bx1z, by1z, bz1z = dipxyz(xsm - xd, y - yd, zsm - zd)
-        bx2x, by2x, bz2x, bx2y, by2y, bz2y, bx2z, by2z, bz2z = dipxyz(xsm - xd, y + yd, zsm - zd)
-        bx3x, by3x, bz3x, bx3y, by3y, bz3y, bx3z, by3z, bz3z = dipxyz(xsm - xd, y - yd, zsm + zd)
-        bx4x, by4x, bz4x, bx4y, by4y, bz4y, bx4z, by4z, bz4z = dipxyz(xsm - xd, y + yd, zsm + zd)
-
-        ix = i * 3 + 3
-        iy = ix + 1
-        iz = iy + 1
-
-        d[1, ix] = (bx1x + bx2x - bx3x - bx4x) * cps + (bz1x + bz2x - bz3x - bz4x) * sps
-        d[2, ix] = by1x + by2x - by3x - by4x
-        d[3, ix] = (bz1x + bz2x - bz3x - bz4x) * cps - (bx1x + bx2x - bx3x - bx4x) * sps
-
-        d[1, iy] = (bx1y - bx2y - bx3y + bx4y) * cps + (bz1y - bz2y - bz3y + bz4y) * sps
-        d[2, iy] = by1y - by2y - by3y + by4y
-        d[3, iy] = (bz1y - bz2y - bz3y + bz4y) * cps - (bx1y - bx2y - bx3y + bx4y) * sps
-
-        d[1, iz] = (bx1z + bx2z + bx3z + bx4z) * cps + (bz1z + bz2z + bz3z + bz4z) * sps
-        d[2, iz] = by1z + by2z + by3z + by4z
-        d[3, iz] = (bz1z + bz2z + bz3z + bz4z) * cps - (bx1z + bx2z + bx3z + bx4z) * sps
-
-        ix += 27
-        iy += 27
-        iz += 27
-
-        d[1, ix] = sps * ((bx1x + bx2x + bx3x + bx4x) * cps + (bz1x + bz2x + bz3x + bz4x) * sps)
-        d[2, ix] = sps * (by1x + by2x + by3x + by4x)
-        d[3, ix] = sps * ((bz1x + bz2x + bz3x + bz4x) * cps - (bx1x + bx2x + bx3x + bx4x) * sps)
-
-        d[1, iy] = sps * ((bx1y - bx2y + bx3y - bx4y) * cps + (bz1y - bz2y + bz3y - bz4y) * sps)
-        d[2, iy] = sps * (by1y - by2y + by3y - by4y)
-        d[3, iy] = sps * ((bz1y - bz2y + bz3y - bz4y) * cps - (bx1y - bx2y + bx3y - bx4y) * sps)
-
-        d[1, iz] = sps * ((bx1z + bx2z - bx3z - bx4z) * cps + (bz1z + bz2z - bz3z - bz4z) * sps)
-        d[2, iz] = sps * (by1z + by2z - by3z - by4z)
-        d[3, iz] = sps * ((bz1z + bz2z - bz3z - bz4z) * cps - (bx1z + bx2z - bx3z - bx4z) * sps)
+        ix = 3i + 3
+        ax, ay, az = coef[ix], coef[ix + 1], coef[ix + 2]
+        tx, ty, tz = sps .* (coef[ix + 27], coef[ix + 28], coef[ix + 29])
+        for (sy, sz) in ((1, 1), (-1, 1), (1, -1), (-1, -1))
+            m = (ax * sz + tx, ay * sy * sz + ty * sy, az + tz * sz)
+            h = h .+ dipxyz(xsm - xd, y - sy * yd, zsm - sz * zd, m)
+        end
     end
 
     for i in 1:5
         zd = BIRK1_ZZ2[i + 9]
-        bx1x, by1x, bz1x, bx1y, by1y, bz1y, bx1z, by1z, bz1z = dipxyz(xsm, y, zsm - zd)
-        bx2x, by2x, bz2x, bx2y, by2y, bz2y, bx2z, by2z, bz2z = dipxyz(xsm, y, zsm + zd)
-        ix = 58 + i * 2
-        iz = ix + 1
-        d[1, ix] = (bx1x - bx2x) * cps + (bz1x - bz2x) * sps
-        d[2, ix] = by1x - by2x
-        d[3, ix] = (bz1x - bz2x) * cps - (bx1x - bx2x) * sps
-
-        d[1, iz] = (bx1z + bx2z) * cps + (bz1z + bz2z) * sps
-        d[2, iz] = by1z + by2z
-        d[3, iz] = (bz1z + bz2z) * cps - (bx1z + bx2z) * sps
-
-        ix += 10
-        iz += 10
-        d[1, ix] = sps * ((bx1x + bx2x) * cps + (bz1x + bz2x) * sps)
-        d[2, ix] = sps * (by1x + by2x)
-        d[3, ix] = sps * ((bz1x + bz2x) * cps - (bx1x + bx2x) * sps)
-
-        d[1, iz] = sps * ((bx1z - bx2z) * cps + (bz1z - bz2z) * sps)
-        d[2, iz] = sps * (by1z - by2z)
-        d[3, iz] = sps * ((bz1z - bz2z) * cps - (bx1z - bx2z) * sps)
-    end
-
-    return d
-end
-
-@views function birk1shld(ps, x, y, z)
-    p1 = NTuple{4}(BIRK1_SHLD[65:68])
-    r1 = NTuple{4}(BIRK1_SHLD[69:72])
-    q1 = NTuple{4}(BIRK1_SHLD[73:76])
-    s1 = NTuple{4}(BIRK1_SHLD[77:80])
-    rp = 1.0 ./ p1
-    rr = 1.0 ./ r1
-    rq = 1.0 ./ q1
-    rs = 1.0 ./ s1
-
-    bx = 0.0
-    by = 0.0
-    bz = 0.0
-    sps, cps = sincos(ps)
-    s3ps = 4 * cps^2 - 1
-    l = 1
-    for m in 1:2
-        for i in 1:4
-            sypi, cypi = sincos(y * rp[i])
-            syqi, cyqi = sincos(y * rq[i])
-            for k in 1:4
-                szrk, czrk = sincos(z * rr[k])
-                szsk, czsk = sincos(z * rs[k])
-                sqpr = sqrt(rp[i]^2 + rr[k]^2)
-                sqqs = sqrt(rq[i]^2 + rs[k]^2)
-                epr = exp(x * sqpr)
-                eqs = exp(x * sqqs)
-                if m == 1
-                    hx = -sqpr * epr * cypi * szrk
-                    hy = rp[i] * epr * sypi * szrk
-                    hz = -rr[k] * epr * cypi * czrk
-                    tmp = BIRK1_SHLD[l + 1] * cps + BIRK1_SHLD[l]
-                else
-                    hx = -sps * sqqs * eqs * cyqi * czsk
-                    hy = sps * rq[i] * eqs * syqi * czsk
-                    hz = sps * rs[k] * eqs * cyqi * szsk
-                    tmp = BIRK1_SHLD[l + 1] * s3ps + BIRK1_SHLD[l]
-                end
-                bx += hx * tmp
-                by += hy * tmp
-                bz += hz * tmp
-                l += 2
-            end
+        ix = 58 + 2i
+        ax, az = coef[ix], coef[ix + 1]
+        tx, tz = sps .* (coef[ix + 10], coef[ix + 11])
+        for sz in (1, -1)
+            m = (ax * sz + tx, 0, az + tz * sz)
+            h = h .+ dipxyz(xsm, y, zsm - sz * zd, m)
         end
     end
 
-    return bx, by, bz
+    hx, hy, hz = h
+    b = b .+ (hx * cps + hz * sps, hy, hz * cps - hx * sps)
+
+    return b
 end
 
 function birk2tot_02(ps, x, y, z)
-    return birk2shl(x, y, z, ps) .+ r2_birk(x, y, z, ps)
-end
-
-@views function birk2shl(x, y, z, ps)
-    p = BIRK2_SHL[17:18]
-    r = BIRK2_SHL[19:20]
-    q = BIRK2_SHL[21:22]
-    s = BIRK2_SHL[23:24]
-
-    sps, cps = sincos(ps)
-    s3ps = 4 * cps^2 - 1
-    hx = 0.0
-    hy = 0.0
-    hz = 0.0
-    l = 1
-    for m in 1:2, i in 1:2
-        sypi, cypi = sincos(y / p[i])
-        syqi, cyqi = sincos(y / q[i])
-        for k in 1:2
-            sqpr = sqrt(1 / p[i]^2 + 1 / r[k]^2)
-            sqqs = sqrt(1 / q[i]^2 + 1 / s[k]^2)
-            epr = exp(x * sqpr)
-            eqs = exp(x * sqqs)
-            if m == 1
-                szrk, czrk = sincos(z / r[k])
-                dx = -sqpr * epr * cypi * szrk
-                dy = epr / p[i] * sypi * szrk
-                dz = -epr / r[k] * cypi * czrk
-                tmp = cps
-            else
-                szsk, czsk = sincos(z / s[k])
-                dx = -sps * sqqs * eqs * cyqi * czsk
-                dy = sps * eqs / q[i] * syqi * czsk
-                dz = sps * eqs / s[k] * cyqi * szsk
-                tmp = s3ps
-            end
-            tmp = BIRK2_SHL[l] + BIRK2_SHL[l + 1] * tmp
-            hx += dx * tmp
-            hy += dy * tmp
-            hz += dz * tmp
-            l += 2
-        end
-    end
-    return hx, hy, hz
+    return shlcar(BIRK2_SHL, Val(2), ps, x, y, z) .+ r2_birk(x, y, z, ps)
 end
 
 function r2_birk(x, y, z, ps)
@@ -1249,17 +986,7 @@ end
 function r2inner(x, y, z)
     pl = R2_INNER_PL
     pn = R2_INNER_PN
-    nmax = 5
-    b = @no_escape begin
-        cbx = @alloc(Float64, nmax)
-        cby = @alloc(Float64, nmax)
-        cbz = @alloc(Float64, nmax)
-        bconic!(cbx, cby, cbz, x, y, z)
-        bx = pl[1] * cbx[1] + pl[2] * cbx[2] + pl[3] * cbx[3] + pl[4] * cbx[4] + pl[5] * cbx[5]
-        by = pl[1] * cby[1] + pl[2] * cby[2] + pl[3] * cby[3] + pl[4] * cby[4] + pl[5] * cby[5]
-        bz = pl[1] * cbz[1] + pl[2] * cbz[2] + pl[3] * cbz[3] + pl[4] * cbz[4] + pl[5] * cbz[5]
-        (bx, by, bz)
-    end
+    b = bconic(pl, x, y, z)
     db8 = loops4(x, y, z, pn[1], pn[2], pn[3], pn[4], pn[5], pn[6])
     db6 = dipdistr(x - pn[7], y, z, 0)
     db7 = dipdistr(x - pn[8], y, z, 1)
@@ -1267,7 +994,9 @@ function r2inner(x, y, z)
     return b .+ pl[6] .* db6 .+ pl[7] .* db7 .+ pl[8] .* db8
 end
 
-function bconic!(cbx, cby, cbz, x, y, z)
+# Σₘ₌₁⁵ pl[m] × conical harmonic m
+function bconic(pl, x, y, z)
+    b = (0.0, 0.0, 0.0)
     ro2 = x^2 + y^2
     ro = sqrt(ro2)
     cf = x / ro
@@ -1285,7 +1014,7 @@ function bconic!(cbx, cby, cbz, x, y, z)
     tnh = sh / ch
     cnh = 1 / tnh
 
-    for m in eachindex(cbx)
+    for m in 1:5
         m1 = m
         cfm = cfm1 * cf - sfm1 * sf
         sfm = cfm1 * sf + sfm1 * cf
@@ -1297,10 +1026,8 @@ function bconic!(cbx, cby, cbz, x, y, z)
         bf = -0.5 * m1 * sfm / r * (tnhm1 / ch^2 - cnhm1 / sh^2)
         tnhm1 = tnhm
         cnhm1 = cnhm
-        cbx[m] = bt * c * cf - bf * sf
-        cby[m] = bt * c * sf + bf * cf
-        cbz[m] = -bt * s
+        b = b .+ pl[m] .* (bt * c * cf - bf * sf, bt * c * sf + bf * cf, -bt * s)
     end
 
-    return cbx, cby, cbz
+    return b
 end

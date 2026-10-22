@@ -26,7 +26,7 @@ end
     xss, zss = x, z
     for _ in 1:20
         rh = rh0 + rh2 * (zss / r)^2
-        sinpsas = sps / (1.0 + (r / rh)^3)^0.33333333
+        sinpsas = sps / cbrt(1.0 + (r / rh)^3)
         cospsas = sqrt(1.0 - sinpsas^2)
         xss_new = x * cospsas - z * sinpsas
         zss_new = x * sinpsas + z * cospsas
@@ -34,4 +34,38 @@ end
         xss, zss = xss_new, zss_new
     end
     return xss, zss
+end
+
+"""
+    cartharm(c, p, r, x, y, z, parallel) -> (Bx, By, Bz)
+
+Evaluate the Cartesian-harmonic field `B = Σ c(i,k) ∇Uᵢₖ`, where
+`Uᵢₖ = -exp(x√(1/pᵢ² + 1/rₖ²)) cos(y/pᵢ) f(z/rₖ)`.
+`p` and `r` are spatial scales along y and z; `parallel` selects `f = cos`
+(Bx even, Bz odd in z), otherwise `f = sin` (Bx odd, Bz even).
+Each potential satisfies Laplace's equation. Fitted coefficients provide magnetopause
+shielding or IMF penetration (Tsyganenko 1995, JGR 100, 5599).
+"""
+@inline function cartharm(c, p, r, x, y, z, parallel)
+    syp = map(pᵢ -> sincos(y / pᵢ), p)
+    szr = map(rₖ -> sincos(z / rₖ), r)
+    bx = by = bz = 0.0
+    for i in eachindex(p), k in eachindex(r)
+        sy, cy = syp[i]
+        sz, cz = szr[k]
+        fz, dfz = parallel ? (cz, -sz) : (sz, cz)
+        sq = sqrt(1 / p[i]^2 + 1 / r[k]^2)
+        e = c(i, k) * exp(x * sq)
+        bx -= sq * e * cy * fz
+        by += e / p[i] * sy * fz
+        bz -= e / r[k] * cy * dfz
+    end
+    return bx, by, bz
+end
+
+# Field `f(x, y, z)` of a source tilted by `θ` about the y axis, as for the T01/TS04 shields.
+@inline function tilted(f, θ, x, y, z)
+    st, ct = sincos(θ)
+    hx, hy, hz = f(x * ct - z * st, y, x * st + z * ct)
+    return hx * ct + hz * st, hy, hz * ct - hx * st
 end

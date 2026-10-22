@@ -51,23 +51,7 @@ Key Design Patterns
 
 ## Findings by Category
 
-### Design
-
-Four implementations of the same harmonic shielding pattern: birk_shl, rc_shield, dipole_shield, tail_shield all implement "exponential decay × trig in y × trig in z, tilted, coefficient-weighted". They differ in grid size (3×3, 5×5, 2×3×3×2×2), basis type, and whether sps multiplies the second sum. Conceptually the same family — auditing one tells you nothing about the others.
-
-### Performance
-
-Bumper.jl used only in t96_helpers.jl (3 spots: birk1tot_02 and r2inner). The T01/TS04 hot paths don't use it — they happen to avoid allocations by returning scalar tuples, which is good but accidental.
-
 ### Simplicity / Readability
-
-l counter anti-pattern in all four shielding functions:
-l = 0
-for ...
-    l += 1; bx += a[l] * ...
-If loop order ever changes, all indices silently shift.
-
-dipole_shield has a silent special case at k=3 (lines 83–88 of dipole.jl) using a different basis formula with no comment ferent type of harmonic basis function — worth one line.
 
 birk_1n2's phi convention uses atan(-zsc, xsc) (note the minus) — solar magnetic coordinates have z→-z relative to GSM
 
@@ -79,8 +63,6 @@ apprc:107-108 — two lines of chained arithmetic longer than the screen. Each c
 
 ┌─────────────┬───────────────────────────────────────────┬──────────────────────────┐
 │    Area     │                   Issue                   │          Impact          │
-├─────────────┼───────────────────────────────────────────┼──────────────────────────┤
-│ Simplicity  │ l counter pattern × 4                     │ fragile, blocks inbounds │
 ├─────────────┼───────────────────────────────────────────┼──────────────────────────┤
 │ Simplicity  │ apprc two-liner expressions               │ readability              │
 └─────────────┴───────────────────────────────────────────┴──────────────────────────┘

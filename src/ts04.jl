@@ -50,4 +50,4 @@ function ts04(x, y, z, ps, pdyn, dst, byimf, bzimf, w1 = 0.0, w2 = 0.0, w3 = 0.0
     return GSM(ts04_extall(pdyn, dst_ast, byimf, bzimf, w1, w2, w3, w4, w5, w6, ps, x, y, z))
 end
 
-evalmodel(m::TS04, x, y, z, ps) = ts04(x, y, z, ps, m.pdyn, m.dst, m.byimf, m.bzimf, m.w1, m.w2, m.w3, m.w4, m.w5, m.w6)
+evalmodel(m::TS04, x, y, z, ps::Real) = ts04(x, y, z, ps, m.pdyn, m.dst, m.byimf, m.bzimf, m.w1, m.w2, m.w3, m.w4, m.w5, m.w6)

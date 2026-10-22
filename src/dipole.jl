@@ -1,3 +1,6 @@
+# Reference equatorial dipole field at 1 Earth radius, in nT, used by T96.
+const T96_DIPOLE_STRENGTH = 30574
+
 function dipdistr(x, y, z, mode)
     x2 = x^2
     rho2 = x2 + y^2
@@ -16,94 +19,52 @@ function dipdistr(x, y, z, mode)
     return bx, by, bz
 end
 
-function dipole(ps, x, y, z; q0 = 30574)
+function dipole(ps, x, y, z; q0 = T96_DIPOLE_STRENGTH)
     sps, cps = sincos(ps)
-
-    p = x^2
-    u = z^2
-    v = 3 * z * x
-    t = y^2
-    q = q0 / sqrt(p + t + u)^5
-    bx = q * ((t + u - 2 * p) * sps - v * cps)
-    by = -3 * y * q * (x * sps + z * cps)
-    bz = q * ((p + t - 2 * u) * cps - v * sps)
-
-    return bx, by, bz
+    return dipxyz(x, y, z, (-sps, 0, -cps); q0)
 end
+
+@inline function dipxyz(x, y, z, m; q0 = T96_DIPOLE_STRENGTH)
+    mx, my, mz = m
+    r2 = x^2 + y^2 + z^2
+    scale = q0 / (r2^2 * sqrt(r2))
+    rm = 3 * (x * mx + y * my + z * mz)
+    return scale * (x * rm - r2 * mx),
+        scale * (y * rm - r2 * my),
+        scale * (z * rm - r2 * mz)
+end
+
 
 # This subroutine returns the shielding field for the earth's dipole, represented by
 # 2x3x3=18 "cartesian" harmonics, tilted with respect to the z=0 plane
 function dipole_shield(x, y, z, ps)
     a = SHLCAR_A
-    p1, p2, p3 = a[37], a[38], a[39]
-    r1, r2, r3 = a[40], a[41], a[42]
-    q1, q2, q3 = a[43], a[44], a[45]
-    s1, s2, s3 = a[46], a[47], a[48]
-    t1, t2 = a[49], a[50]
-
     sps, cps = sincos(ps)
-    s2ps = 2.0 * cps
-    st1, ct1 = sincos(ps * t1)
-    st2, ct2 = sincos(ps * t2)
-    x1, z1 = x * ct1 - z * st1, x * st1 + z * ct1
-    x2, z2 = x * ct2 - z * st2, x * st2 + z * ct2
-
-    # First sum (perpendicular symmetry) - 9 terms for p1,p2,p3 x r1,r2,r3
-    p_arr = (p1, p2, p3)
-    r_arr = (r1, r2, r3)
-
-    bx = 0.0
-    by = 0.0
-    bz = 0.0
-    @inbounds for (i, p) in enumerate(p_arr)
-        syp, cyp = sincos(y / p)
-        for (k, rk) in enumerate(r_arr)
-            idx = 3 * (i - 1) + k
-            szr, czr = sincos(z1 / rk)
-            sqpr = sqrt(1.0 / p^2 + 1.0 / rk^2)
-            expr = exp(sqpr * x1)
-            if k < 3
-                fx = -sqpr * expr * cyp * szr
-                hy = expr / p * syp * szr
-                fz = -expr * cyp / rk * czr
-            else
-                # Special formula for k=3 (r3)
-                fx = -expr * cyp * (sqpr * z1 * czr + szr / rk * (x1 + 1.0 / sqpr))
-                hy = expr / p * syp * (z1 * czr + x1 / rk * szr / sqpr)
-                fz = -expr * cyp * (czr * (1.0 + x1 / rk^2 / sqpr) - z1 / rk * szr)
-            end
-            hx = fx * ct1 + fz * st1
-            hz = -fx * st1 + fz * ct1
-            coef = a[2 * idx - 1] + a[2 * idx] * cps
-            bx += coef * hx
-            by += coef * hy
-            bz += coef * hz
-        end
+    p, r, q, s = (ntuple(i -> a[36 + 3j + i], 3) for j in 0:3)
+    c1(i, k) = a[6i + 2k - 7] + a[6i + 2k - 6] * cps
+    c2(i, k) = a[6i + 2k + 11] + a[6i + 2k + 12] * 2cps
+    b1 = tilted(ps * a[49], x, y, z) do x, y, z
+        cartharm(c1, p, r[1:2], x, y, z, false) .+ cartharm_dr(i -> c1(i, 3), p, r[3], x, y, z)
     end
-
-    # Second sum (parallel symmetry) - 9 terms for q1,q2,q3 x s1,s2,s3
-    q_arr = (q1, q2, q3)
-    s_arr = (s1, s2, s3)
-
-    @inbounds for (i, qi) in enumerate(q_arr)
-        syq, cyq = sincos(y / qi)
-        for (k, sk) in enumerate(s_arr)
-            idx = 3 * (i - 1) + k
-            szs, czs = sincos(z2 / sk)
-            sqqs = sqrt(1.0 / qi^2 + 1.0 / sk^2)
-            exqs = exp(sqqs * x2)
-            fx = -sqqs * exqs * cyq * czs * sps
-            hy = exqs / qi * syq * czs * sps
-            fz = exqs * cyq / sk * szs * sps
-            hx = fx * ct2 + fz * st2
-            hz = -fx * st2 + fz * ct2
-            coef = a[18 + 2 * idx - 1] + a[18 + 2 * idx] * s2ps
-            bx += coef * hx
-            by += coef * hy
-            bz += coef * hz
-        end
+    b2 = tilted(ps * a[50], x, y, z) do x, y, z
+        cartharm(c2, q, s, x, y, z, true)
     end
+    return b1 .+ sps .* b2
+end
 
+# Perpendicular harmonics of `cartharm` replaced by -r²∂U/∂r (still harmonic: ∇²U = 0 for every
+# r); the dipole shield uses them for its third z-wavelength.
+function cartharm_dr(c, p, r, x, y, z)
+    sz, cz = sincos(z / r)
+    bx = by = bz = 0.0
+    for i in eachindex(p)
+        sy, cy = sincos(y / p[i])
+        sq = sqrt(1 / p[i]^2 + 1 / r^2)
+        e = c(i) * exp(x * sq)
+        bx -= e * cy * (sq * z * cz + sz / r * (x + 1 / sq))
+        by += e / p[i] * sy * (z * cz + x / r * sz / sq)
+        bz -= e * cy * (cz * (1 + x / r^2 / sq) - z / r * sz)
+    end
     return bx, by, bz
 end
 

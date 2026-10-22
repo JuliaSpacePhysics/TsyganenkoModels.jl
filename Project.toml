@@ -8,7 +8,6 @@ projects = ["docs", "test", "benchmark"]
 
 [deps]
 Bessels = "0e736298-9ec6-45e8-9647-e4fc86a2fe38"
-Bumper = "8ce10254-0962-460f-a3d8-1f77fea1446e"
 Dates = "ade2ca70-3891-5945-98fb-dc099432e06a"
 GeoCotrans = "4624b3bc-fe35-44f8-bfa8-722ff9c0e307"
 
@@ -20,7 +19,6 @@ TsyganenkoModelsCDAWebExt = "CDAWeb"
 
 [compat]
 Bessels = "0.2"
-Bumper = "0.7"
 CDAWeb = "0.3"
 Dates = "1"
 GeoCotrans = "0.2.2, 0.3"
