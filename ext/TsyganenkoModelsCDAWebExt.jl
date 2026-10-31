@@ -2,25 +2,24 @@ module TsyganenkoModelsCDAWebExt
 
 using CDAWeb: CDAWeb, getdata, times
 using Dates
-using TsyganenkoModels: TsyganenkoModels, OMNI, T89, T96, T01, TS04, fill_gaps!, hourly_mean, t01_g, ts05_w, TS05_R
+using TsyganenkoModels: TsyganenkoModels, OMNI, T89, T96, T01, TS04, fill_gaps!, masked_mean, t01_g, ts05_w, TS05_R
 
 const STEP = Minute(5)
 const PER_DAY = 288
-# 5-min samples fetched before the day, for W memory to decay below e⁻¹⁰ at the slowest rate (W3, ~13 days),
-# and after it, for filling gaps that straddle midnight
+# 5-min samples fetched before the day, for W memory to decay below e⁻¹⁰ at the slowest rate (W3, ~13 days)
 const NBEFORE = ceil(Int, 10 / (minimum(TS05_R) * 5 / 60))
-const NAFTER = 36
+# Samples kept on each side of the day: the widest window, T01's 12 samples ending at `t`
+const PAD = 12
+# A bounding observation beyond the longest interpolated run (35 missing samples).
+const GAP_PAD = 36
 
+# Gap-filled 5-min observations shared by the models, including PAD samples on each side of the day
 struct OMNIDay
     pdyn::Vector{Float64}
+    v::Vector{Float64}
+    by::Vector{Float64}  # GSM
+    bz::Vector{Float64}  # GSM
     symh::Vector{Float64}
-    by::Vector{Float64}
-    bz::Vector{Float64}
-    sw_hourly::Vector{NTuple{3, Float64}}  # pdyn, by, bz per UT hour
-    g::Vector{NTuple{2, Float64}}
-    w::Vector{NTuple{6, Float64}}
-    kp::Vector{Float64}
-    dst::Vector{Float64}
 end
 
 # Values of `name` on the regular grid `t0 + (0:n-1) * step`, NaN where OMNI has no record
@@ -37,34 +36,42 @@ function _grid!(out, ts, vs, t0, step)
     return out
 end
 
-function OMNIDay(day::Date)
-    t0 = DateTime(day) - NBEFORE * STEP
-    n = NBEFORE + PER_DAY + NAFTER
+function _five_minute(names, t0, n)
     hro = CDAWeb.Dataset("OMNI_HRO_5MIN")
-    den, v, by, bz, symh = map(("proton_density", "flow_speed", "BY_GSM", "BZ_GSM", "SYM_H")) do name
+    return map(names) do name
         fill_gaps!(_series(hro, name, t0, n, STEP))
     end
-    pdyn = @. 1.937e-6 * den * v^2  # 1.16 mₚ in nPa per (cm⁻³ (km/s)²), Tsyganenko's value
-    idx = NBEFORE .+ (1:PER_DAY)
-    hourly = CDAWeb.Dataset("OMNI2_H0_MRG1HR")
-    return OMNIDay(
-        pdyn[idx], symh[idx], by[idx], bz[idx],
-        [map(x -> hourly_mean(x, NBEFORE + 12h), (pdyn, by, bz)) for h in 1:24],
-        [t01_g(v, by, bz, i) for i in idx],
-        ts05_w(den, v, bz)[idx],
-        _series(hourly, "KP", DateTime(day), 24, Hour(1)),
-        _series(hourly, "DST", DateTime(day), 24, Hour(1)),
-    )
 end
 
-const CACHE = Dict{Date, OMNIDay}()
-const LOCK = ReentrantLock()
+# Gap-filled series of `names` on the OMNIDay grid
+function _five_minute(names, day::Date)
+    margin = PAD + GAP_PAD
+    xs = _five_minute(names, DateTime(day) - margin * STEP, PER_DAY + 2margin)
+    return map(x -> x[(GAP_PAD + 1):(end - GAP_PAD)], xs)
+end
 
-function _sample(t)
-    t = DateTime(t)
-    day = Date(t)
-    d = @lock LOCK get!(() -> OMNIDay(day), CACHE, day)
-    return d, (t - DateTime(day)) ÷ STEP + 1, hour(t) + 1, t
+function OMNIDay(day::Date)
+    den, v, by, bz, symh = _five_minute(("proton_density", "flow_speed", "BY_GSM", "BZ_GSM", "SYM_H"), day)
+    pdyn = @. 1.937e-6 * den * v^2  # 1.16 mₚ in nPa per (cm⁻³ (km/s)²), Tsyganenko's value
+    return OMNIDay(pdyn, v, by, bz, symh)
+end
+
+function _ts04_w(day)
+    t0 = DateTime(day) - NBEFORE * STEP
+    n = NBEFORE + PER_DAY + GAP_PAD
+    den, v, bz = _five_minute(("proton_density", "flow_speed", "BZ_GSM"), t0, n)
+    return ts05_w(den, v, bz)[NBEFORE .+ (1:PER_DAY)]
+end
+
+const LOCK = ReentrantLock()
+const FIVE_MIN = Dict{Date, OMNIDay}()
+const HOURLY = Dict{Tuple{Date, String}, Vector{Float64}}()
+const TS04_W = Dict{Date, Vector{NTuple{6, Float64}}}()
+
+_cached(f, cache, key) = @lock LOCK get!(f, cache, key)
+_five_min(day) = _cached(() -> OMNIDay(day), FIVE_MIN, day)
+_hourly(name, day) = _cached(HOURLY, (day, name)) do
+    _series(CDAWeb.Dataset("OMNI2_H0_MRG1HR"), name, DateTime(day), 24, Hour(1))
 end
 
 function _checked(p, t)
@@ -73,27 +80,33 @@ function _checked(p, t)
     return p
 end
 
-function TsyganenkoModels.inputs(::OMNI, ::Type{<:T89}, t)
-    d, _, h, t = _sample(t)
-    kp10 = _checked((; kp = d.kp[h]), t).kp  # OMNI stores Kp × 10: 1-, 1, 1+ are 7, 10, 13
+function TsyganenkoModels.inputs(::OMNI, M::Type{<:Union{T89, T96, T01, TS04}}, t)
+    t = DateTime(t)
+    day = Date(t)
+    return _input(M, day, (t - DateTime(day)) ÷ STEP + 1, t)
+end
+
+# Sample `j` of `day` is `PAD + j` in its `OMNIDay`
+function _input(::Type{<:T89}, day, _, t)
+    kp10 = _checked((; kp = _hourly("KP", day)[hour(t) + 1]), t).kp  # OMNI stores Kp × 10: 1-, 1, 1+ are 7, 10, 13
     return (; iopt = min(round(Int, kp10 / 10) + 1, 7))
 end
 
-function TsyganenkoModels.inputs(::OMNI, ::Type{<:T96}, t)
-    d, _, h, t = _sample(t)
-    pdyn, byimf, bzimf = d.sw_hourly[h]
-    return _checked((; pdyn, dst = d.dst[h], byimf, bzimf), t)
+function _input(::Type{<:T96}, day, _, t)
+    d, h = _five_min(day), hour(t) + 1
+    pdyn, byimf, bzimf = map(x -> masked_mean(view(x, (PAD + 12h - 11):(PAD + 12h))), (d.pdyn, d.by, d.bz))
+    return _checked((; pdyn, dst = _hourly("DST", day)[h], byimf, bzimf), t)
 end
 
-function TsyganenkoModels.inputs(::OMNI, ::Type{<:T01}, t)
-    d, i, _, t = _sample(t)
-    g1, g2 = d.g[i]
+function _input(::Type{<:T01}, day, j, t)
+    d, i = _five_min(day), PAD + j
+    g1, g2 = t01_g(d.v, d.by, d.bz, i)
     return _checked((; pdyn = d.pdyn[i], dst = d.symh[i], byimf = d.by[i], bzimf = d.bz[i], g1, g2), t)
 end
 
-function TsyganenkoModels.inputs(::OMNI, ::Type{<:TS04}, t)
-    d, i, _, t = _sample(t)
-    w1, w2, w3, w4, w5, w6 = d.w[i]
+function _input(::Type{<:TS04}, day, j, t)
+    d, i = _five_min(day), PAD + j
+    w1, w2, w3, w4, w5, w6 = _cached(() -> _ts04_w(day), TS04_W, day)[j]
     return _checked((; pdyn = d.pdyn[i], dst = d.symh[i], byimf = d.by[i], bzimf = d.bz[i], w1, w2, w3, w4, w5, w6), t)
 end
 
