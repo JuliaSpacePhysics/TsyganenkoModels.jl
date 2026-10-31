@@ -26,6 +26,10 @@ end
     @test T01(param)(r_gsm, ps) ≈ [46.972663449207076, 1.5442350206329172, -31.3541847716317] rtol = 1.0e-6
     @test TS04(param)(r_gsm, ps) ≈ [25.835474201385036, 1.5987724615979861, -18.1054945348421]
 
+    # TA16_RBF.f (11/23/2021) compiled with gfortran; agrees to ~1e-9 as it truncates π and the degree-to-radian factor
+    @test TA16(pdyn = 2.0, symhc = -30.0, xind = 0.8, byimf = 3.0)(r_gsm, ps) ≈ [36.193199414830254, 2.4386939542793806, -19.349898119812217] rtol = 1.0e-8
+    @test TA16(pdyn = 6.0, symhc = -120.0, xind = 1.8, byimf = -7.0)((8.0, -3.0, 1.0), 0.4) ≈ GSM(54.775603850148237, -3.0340767211959898, 26.967360173238905) rtol = 1.0e-8
+
     @testset "near magnetopause and outside magnetosphere" begin
         # intermediate sigma case (S0 - DSIG < sigma < S0 + DSIG)
         @test t96([-6.5, 13, 13.0], ps, param...) ≈ [10.64621818721388, -0.8896267128450983, 1.9983159012100993]
@@ -125,6 +129,14 @@ end
     w = ts05_w(den, v, gappy)
     @test w[n] == ts05_w(den, v, northward)[n]
     @test all(isnan, w[n - 100])
+
+    # TA16 Newell index: By = -3, Bz = -4 nT has sin²(θ/2) = 0.9
+    p = TsyganenkoModels.ta16_inputs(ones(40), zeros(40), fill(400.0, 40), fill(-3.0, 40), fill(-4.0, 40), 20)
+    @test p.xind ≈ 1.0e-4 * 400^(4 / 3) * 5^(2 / 3) * 0.9^(4 / 3)
+    # Trailing window: 5-min By of 2015-02-28 03:10–03:40 and ⟨By⟩ = -0.71 at 03:40 from Tsyganenko's
+    # 2015_OMNI_5m_with_GEO_RBF_TA17_drivers.dat; 6-sample windows give -1.10 or -0.37.
+    by = [1.58, 1.17, 1.17, -0.68, -2.53, -2.91, -2.79, 0, 0, 0]
+    @test TsyganenkoModels.ta16_inputs(ones(10), zeros(10), fill(400.0, 10), by, zeros(10), 7).byimf ≈ -0.71 atol = 0.005
 end
 
 @testset "OMNI input windows" begin
@@ -143,9 +155,10 @@ end
         t = DateTime(day)
         @test inputs(Driven(T89), t).iopt === 4
         @test_throws ArgumentError inputs(Driven(T89), t + Hour(1))
-        @test !haskey(ext.FIVE_MIN, day)
-        ext.FIVE_MIN[day] = ext.OMNIDay(pdyn, 400 .+ k, zeros(n), fill(-5.0, n), k)
+        @test !haskey(ext.OMNI_DAYS, day)
+        ext.OMNI_DAYS[day] = ext.OMNIDay(pdyn, 400 .+ k, zeros(n), zeros(n), fill(-5.0, n), k)
         ext.TS04_W[day] = [(x, x, x, x, x, x) for x in 1.0:ext.PER_DAY]
+        ext.TA16_OBS[day] = ext.TA16Obs(zeros(n), zeros(n), fill((-400.0, 0.0, 0.0), n))
         for minutes in (59, 60, 1439)
             h = minutes ÷ 60 + 1
             p = inputs(Driven(T96), t + Minute(minutes))
@@ -160,8 +173,14 @@ end
             @test inputs(Driven(TS04), t + Minute(minutes)).w6 == sample
         end
         @test_throws ArgumentError inputs(Driven(T01), t + Minute(5))
+        for minutes in (0, 1439)
+            sample = minutes ÷ 5 + 1
+            p = inputs(Driven(TA16), t + Minute(minutes))
+            valid = filter(!=(2), collect((sample - 3):(sample + 3)))
+            @test p.symhc ≈ sum(0.8j - 13sqrt(100 + j) for j in valid) / length(valid)
+        end
     finally
-        foreach(c -> delete!(c, day), (ext.FIVE_MIN, ext.TS04_W))
+        foreach(c -> delete!(c, day), (ext.OMNI_DAYS, ext.TS04_W, ext.TA16_OBS))
         foreach(name -> delete!(ext.HOURLY, (day, name)), ("KP", "DST"))
     end
 end
@@ -176,6 +195,15 @@ end
         m = Driven(M)
         @test m(r, t) == M(inputs(m, t))(r, dipole_tilt(t))
     end
+    using GeoCotrans: GSW, at, rotation
+    p = inputs(Driven(TA16), t)
+    f = GSW(p.vgse)
+    R = rotation(GSM() => f, t)
+    B = R' * TA16(; p...)(R * collect(r), dipole_tilt(t, f))
+    @test Driven(TA16)(r, t) ≈ B
+    @test at(Driven(TA16), t)(collect(r)) ≈ B
+    # Pdyn of Tsyganenko's 2015_OMNI_5m_with_GEO_RBF_TA17_drivers.dat at 2015-04-15 07:05
+    @test inputs(Driven(TA16), DateTime(2015, 4, 15, 7, 7)).pdyn ≈ 8.27 atol = 0.005
     quiet(f) = Base.CoreLogging.with_logger(f, Base.CoreLogging.NullLogger())
     @test_throws ArgumentError quiet(() -> inputs(Driven(T96), DateTime(1960)))
 end

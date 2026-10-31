@@ -17,6 +17,7 @@ models["T89"] = @benchmarkable T89(2)($r_gsm, $ps)
 models["T96"] = @benchmarkable T96($param)($r_gsm, $ps)
 models["T01"] = @benchmarkable T01($param)($r_gsm, $ps)
 models["TS04"] = @benchmarkable TS04($param)($r_gsm, $ps)
+models["TA16"] = @benchmarkable TA16(pdyn = 2.0, symhc = -30.0, xind = 0.8, byimf = 2.0)($r_gsm, $ps)
 
 # ── Shared field components ────────────────────────────────────────────────────
 components = SUITE["components"] = BenchmarkGroup()

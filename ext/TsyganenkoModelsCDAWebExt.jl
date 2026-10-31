@@ -2,7 +2,8 @@ module TsyganenkoModelsCDAWebExt
 
 using CDAWeb: CDAWeb, getdata, times
 using Dates
-using TsyganenkoModels: TsyganenkoModels, OMNI, T89, T96, T01, TS04, fill_gaps!, masked_mean, t01_g, ts05_w, TS05_R
+using GeoCotrans: GSM, GSW, SVector, rotation
+using TsyganenkoModels: TsyganenkoModels, OMNI, T89, T96, T01, TS04, TA16, fill_gaps!, masked_mean, t01_g, ta16_inputs, ts05_w, TS05_R
 
 const STEP = Minute(5)
 const PER_DAY = 288
@@ -17,9 +18,18 @@ const GAP_PAD = 36
 struct OMNIDay
     pdyn::Vector{Float64}
     v::Vector{Float64}
-    by::Vector{Float64}  # GSM
-    bz::Vector{Float64}  # GSM
+    # IMF in GSM; OMNI has only BX_GSE = GSM Bx
+    bx::Vector{Float64}
+    by::Vector{Float64}
+    bz::Vector{Float64}
     symh::Vector{Float64}
+end
+
+# On the OMNIDay grid; IMF in the GSW frame of each sample's `vgse`
+struct TA16Obs
+    by::Vector{Float64}
+    bz::Vector{Float64}
+    vgse::Vector{NTuple{3, Float64}}
 end
 
 # Values of `name` on the regular grid `t0 + (0:n-1) * step`, NaN where OMNI has no record
@@ -36,7 +46,7 @@ function _grid!(out, ts, vs, t0, step)
     return out
 end
 
-function _five_minute(names, t0, n)
+function _fetch_5min(names, t0, n)
     hro = CDAWeb.Dataset("OMNI_HRO_5MIN")
     return map(names) do name
         fill_gaps!(_series(hro, name, t0, n, STEP))
@@ -44,43 +54,55 @@ function _five_minute(names, t0, n)
 end
 
 # Gap-filled series of `names` on the OMNIDay grid
-function _five_minute(names, day::Date)
+function _fetch_5min(names, day::Date)
     margin = PAD + GAP_PAD
-    xs = _five_minute(names, DateTime(day) - margin * STEP, PER_DAY + 2margin)
+    xs = _fetch_5min(names, DateTime(day) - margin * STEP, PER_DAY + 2margin)
     return map(x -> x[(GAP_PAD + 1):(end - GAP_PAD)], xs)
 end
 
 function OMNIDay(day::Date)
-    den, v, by, bz, symh = _five_minute(("proton_density", "flow_speed", "BY_GSM", "BZ_GSM", "SYM_H"), day)
+    den, v, bx, by, bz, symh = _fetch_5min(("proton_density", "flow_speed", "BX_GSE", "BY_GSM", "BZ_GSM", "SYM_H"), day)
     pdyn = @. 1.937e-6 * den * v^2  # 1.16 mₚ in nPa per (cm⁻³ (km/s)²), Tsyganenko's value
-    return OMNIDay(pdyn, v, by, bz, symh)
+    return OMNIDay(pdyn, v, bx, by, bz, symh)
+end
+
+function TA16Obs(day::Date)
+    d = _omni_day(day)
+    vx, vy, vz = _fetch_5min(("Vx", "Vy", "Vz"), day)
+    vgse = tuple.(vx, vy .+ 29.78, vz)
+    t0 = DateTime(day) - PAD * STEP
+    b = map(eachindex(vgse)) do k
+        rotation(GSM() => GSW(vgse[k]), t0 + (k - 1) * STEP) * SVector(d.bx[k], d.by[k], d.bz[k])
+    end
+    return TA16Obs(getindex.(b, 2), getindex.(b, 3), vgse)
 end
 
 function _ts04_w(day)
     t0 = DateTime(day) - NBEFORE * STEP
     n = NBEFORE + PER_DAY + GAP_PAD
-    den, v, bz = _five_minute(("proton_density", "flow_speed", "BZ_GSM"), t0, n)
+    den, v, bz = _fetch_5min(("proton_density", "flow_speed", "BZ_GSM"), t0, n)
     return ts05_w(den, v, bz)[NBEFORE .+ (1:PER_DAY)]
 end
 
 const LOCK = ReentrantLock()
-const FIVE_MIN = Dict{Date, OMNIDay}()
+const OMNI_DAYS = Dict{Date, OMNIDay}()
 const HOURLY = Dict{Tuple{Date, String}, Vector{Float64}}()
 const TS04_W = Dict{Date, Vector{NTuple{6, Float64}}}()
+const TA16_OBS = Dict{Date, TA16Obs}()
 
 _cached(f, cache, key) = @lock LOCK get!(f, cache, key)
-_five_min(day) = _cached(() -> OMNIDay(day), FIVE_MIN, day)
+_omni_day(day) = _cached(() -> OMNIDay(day), OMNI_DAYS, day)
 _hourly(name, day) = _cached(HOURLY, (day, name)) do
     _series(CDAWeb.Dataset("OMNI2_H0_MRG1HR"), name, DateTime(day), 24, Hour(1))
 end
 
 function _checked(p, t)
-    i = findfirst(isnan, p)
+    i = findfirst(x -> any(isnan, x), p)
     isnothing(i) || throw(ArgumentError("OMNI has no `$i` at $t (no data or a gap over 3 hours)"))
     return p
 end
 
-function TsyganenkoModels.inputs(::OMNI, M::Type{<:Union{T89, T96, T01, TS04}}, t)
+function TsyganenkoModels.inputs(::OMNI, M::Type{<:Union{T89, T96, T01, TS04, TA16}}, t)
     t = DateTime(t)
     day = Date(t)
     return _input(M, day, (t - DateTime(day)) ÷ STEP + 1, t)
@@ -93,21 +115,26 @@ function _input(::Type{<:T89}, day, _, t)
 end
 
 function _input(::Type{<:T96}, day, _, t)
-    d, h = _five_min(day), hour(t) + 1
+    d, h = _omni_day(day), hour(t) + 1
     pdyn, byimf, bzimf = map(x -> masked_mean(view(x, (PAD + 12h - 11):(PAD + 12h))), (d.pdyn, d.by, d.bz))
     return _checked((; pdyn, dst = _hourly("DST", day)[h], byimf, bzimf), t)
 end
 
 function _input(::Type{<:T01}, day, j, t)
-    d, i = _five_min(day), PAD + j
+    d, i = _omni_day(day), PAD + j
     g1, g2 = t01_g(d.v, d.by, d.bz, i)
     return _checked((; pdyn = d.pdyn[i], dst = d.symh[i], byimf = d.by[i], bzimf = d.bz[i], g1, g2), t)
 end
 
 function _input(::Type{<:TS04}, day, j, t)
-    d, i = _five_min(day), PAD + j
+    d, i = _omni_day(day), PAD + j
     w1, w2, w3, w4, w5, w6 = _cached(() -> _ts04_w(day), TS04_W, day)[j]
     return _checked((; pdyn = d.pdyn[i], dst = d.symh[i], byimf = d.by[i], bzimf = d.bz[i], w1, w2, w3, w4, w5, w6), t)
+end
+
+function _input(::Type{<:TA16}, day, j, t)
+    d, o, i = _omni_day(day), _cached(() -> TA16Obs(day), TA16_OBS, day), PAD + j
+    return _checked((; pdyn = d.pdyn[i], ta16_inputs(d.pdyn, d.symh, d.v, o.by, o.bz, i)..., vgse = o.vgse[i]), t)
 end
 
 end

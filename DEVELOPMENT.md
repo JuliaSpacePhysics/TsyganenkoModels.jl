@@ -1,33 +1,5 @@
 # Development notes
 
-Repo Structure
-
-TsyganenkoModels.jl/
-├── src/
-│   ├── TsyganenkoModels.jl     # Module root; exports T89–TS04, TsyIGRF, IGRF, dipole_tilt
-│   ├── models.jl               # Abstract type TsyganenkoModel; struct defs T89/T96/T01/TS04
-│   ├── composition.jl          # TsyIGRF = IGRF + Tsyganenko, evaluate_model dispatch
-│   ├── driven.jl               # Driven: parameters from a time-dependent source; T01 G and TS05 W drivers
-│   │
-│   ├── t89.jl / t96.jl / t01.jl / ts04.jl    # Model entry points; functor (m::T01)(x,y,z,ps)
-│   ├── t01_funcs.jl / ts04_funcs.jl           # extall() — assemble all field components
-│   ├── t01_consts.jl / t96_consts.jl / ts04_consts.jl  # Coefficient arrays (T01_A, TS04_A, …)
-│   │
-│   ├── ring_current.jl         # full_rc, src_prc, ap_rc/apprc, rc_shield — C_SY, C_PR
-│   ├── Birkeland_current.jl    # birk_tot, one_cone, birk_shl — SH coefficient matrices
-│   ├── tail.jl                 # deformed, warped, taildisk — TAIL_A1/A2, TAIL_F/B/C
-│   ├── dipole.jl               # dipole_tilt, dipole, dipole_shield — SHLCAR_A
-│   ├── helpers.jl              # _switch (magnetopause boundary logic)
-│   └── dual.jl                 # Minimal forward-mode Dual for the r/θ Jacobians in _rc_symm, prc_quad, one_cone
-│
-├── test/
-│   ├── runtests.jl             # Aqua, dipole_tilt, all 4 models, field-line tracing
-│   └── test_geopack.jl         # Cross-validation vs Python geopack
-│
-├── ext/TsyganenkoModelsCDAWebExt.jl  # OMNI() source: fetches and caches OMNI per day
-├── lib/Geopack.jl/             # Julia wrapper for Python geopack (reference)
-
----
 Data Flow
 
 User call: model(x, y, z, ps)
@@ -39,33 +11,11 @@ User call: model(x, y, z, ps)
             ├─ full_rc()            # Ring current ← ring_current.jl
             └─ linear combination   # weighted sum via model params
 
-TS04 has the same structure but adds 6 activity weights (w1–w6) and slightly different fixed parameters (rh0=7.5, g=35 vs T01's parameter-fitted values).
-
----
 Key Design Patterns
 
 - Functor interface — (m::T01)(x, y, z, ps) dispatches to evalmodel, then the raw function
 - _switch — smooth magnetopause boundary: inside → full model, outside → just IMF penetration
 - Component functions shared across T01/TS04: full_rc, birk_tot, deformed, dipole_shield all live in the parent module and are imported
-- ring_current.jl is the most complex component — the only one with both a symmetric solver (_rc_symm via dual-number gradient of Aφ) and a shielding field (rc_shield with 86-element coefficient vectors)
-
-## Findings by Category
-
-### Simplicity / Readability
-
-birk_1n2's phi convention uses atan(-zsc, xsc) (note the minus) — solar magnetic coordinates have z→-z relative to GSM
-
-t96_helpers.jl is 1306 lines — a T96-specific monolith with its own Birkeland, ring current, and dipole shielding that components. These aren't wrong (T96 uses different parameterizations), but the file has no internal section structure.
-
-apprc:107-108 — two lines of chained arithmetic longer than the screen. Each computes alpha_s and gamma_s via a sum ofeach term onto its own line would make the fitting structure visible.
-
-### Summary Table
-
-┌─────────────┬───────────────────────────────────────────┬──────────────────────────┐
-│    Area     │                   Issue                   │          Impact          │
-├─────────────┼───────────────────────────────────────────┼──────────────────────────┤
-│ Simplicity  │ apprc two-liner expressions               │ readability              │
-└─────────────┴───────────────────────────────────────────┴──────────────────────────┘
 
 ## TS04 vs T01 Comparison
 

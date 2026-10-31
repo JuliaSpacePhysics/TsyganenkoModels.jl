@@ -17,6 +17,7 @@ T89 = jl.TsyganenkoModels.T89
 T96 = jl.TsyganenkoModels.T96
 T01 = jl.TsyganenkoModels.T01
 TS04 = jl.TsyganenkoModels.TS04
+TA16 = jl.TsyganenkoModels.TA16
 TsyIGRF = jl.TsyganenkoModels.TsyIGRF
 IGRF = jl.TsyganenkoModels.IGRF
 
@@ -32,6 +33,7 @@ __all__ = [
     "T96",
     "T01",
     "TS04",
+    "TA16",
     "TsyIGRF",
     "IGRF",
     "__version__",

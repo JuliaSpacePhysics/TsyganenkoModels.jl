@@ -1,7 +1,7 @@
 """
     Driven(M, source = OMNI())
 
-Model `M` evaluated at time `t` as `M(inputs(m, t))` with tilt `dipole_tilt(t)`.
+Model `M` evaluated at time `t` as `M(inputs(m, t))`.
 """
 struct Driven{M, S} <: ExternalFieldModel
     source::S
@@ -10,11 +10,16 @@ end
 Driven(M::Type{<:TsyganenkoModel}, source = OMNI()) = Driven{M, typeof(source)}(source)
 
 getcsys(::Driven) = (GSM(), Cartesian3())
+GeoCotrans.freeze(m::Driven{M}, t) where {M} = GeoCotrans.freeze(M(inputs(m, t)), t)
 
 inputs(m::Driven{M}, t) where {M} = inputs(m.source, M, t)
 inputs(f, ::Type, t) = f(t)
 
-evalmodel(m::Driven{M}, x, y, z, t) where {M} = evalmodel(M(inputs(m, t)), x, y, z, dipole_tilt(t))
+# The model's frame may depend on its inputs at `t` (TA16's GSW)
+function evaluate_model(m::Driven, pos, t, from, ::Any, to; kw...)
+    model = GeoCotrans.freeze(m, t)
+    return evaluate_model(model, pos, t, from, getcsys(model), to; kw...)
+end
 
 """
     OMNI()
@@ -26,10 +31,11 @@ Parameters from 5-min (and, for Kp and Dst, hourly) OMNI data:
 - `T96`: Dst and the means of the valid `pdyn`, `byimf`, `bzimf` samples over the UT hour containing `t`, as its fit tagged each field average with the concurrent hourly OMNI values ([Tsyganenko, 1996](https://ui.adsabs.harvard.edu/abs/1996ESASP.389..181T); [Tsyganenko, 2002b, ¶6](https://doi.org/10.1029/2001JA000220)).
 - `T01`: other inputs at the 5-min sample containing `t`, the resolution of its fit, and `g1`, `g2` averaged over the valid samples in the hour ending there.
 - `TS04`: `w1`–`w6` accumulated from 13 days before `t`, when the slowest memory (W3) has decayed below `e⁻¹⁰`; samples in unfilled gaps contribute nothing. Tsyganenko's yearly files instead restart the sums after each gap at the first 2-hour quiet period, and on January 1, discarding the decayed memory of earlier driving that the exponential kernel models.
+- `TA16`: `pdyn` at the 5-min sample containing `t`; `symhc`, the mean of the valid `0.8 SYM-H - 13√pdyn` samples within ±15 min; `xind` and `byimf`, the means of the valid Newell N-index and By samples in the 30 min ending there ([Tsyganenko & Andreeva, 2016, eq. 9 and §4](https://doi.org/10.1002/2016JA023217)); `vgse`, the velocity at that sample with Earth's orbital 29.78 km/s added back to OMNI's Vy, defining the model's GSW frame, in which the IMF is taken. Tsyganenko's driver files use OMNI's Vy as is, which fits later THEMIS and Van Allen Probes magnetometer data worse.
 """
 struct OMNI end
 
-inputs(::OMNI, ::Type, t) = error("OMNI inputs for T89, T96, T01 and TS04 require `using CDAWeb`")
+inputs(::OMNI, ::Type, t) = error("OMNI inputs require `using CDAWeb`")
 
 # Linearly interpolate runs of at most `maxgap` NaNs bounded by valid values on both sides
 function fill_gaps!(x; maxgap = 35)
@@ -57,6 +63,21 @@ function masked_mean(itr)
         n += 1
     end
     return s / n
+end
+
+# TA16 (symhc, xind, byimf) at sample `i` of 5-min series of `pdyn`, `symh`, solar wind speed `v` and IMF `by`, `bz` in the model frame.
+# 30-min windows span 7 samples, both ends included:
+# Tsyganenko's ⟨By⟩ in his archived TA17 driver files
+# (https://web.archive.org/web/20230922174724/https://geo.phys.spbu.ru/~tsyganenko/models/geo/2015_OMNI_5m_with_GEO_RBF_TA17_drivers.dat)
+# is the mean of By at t - 30 min, …, t.
+function ta16_inputs(pdyn, symh, v, by, bz, i)
+    trailing = (i - 6):i
+    newell_n(j) = 1.0e-4 * v[j]^(4 / 3) * hypot(by[j], bz[j])^(2 / 3) * abs(sin(atan(by[j], bz[j]) / 2))^(8 / 3)
+    return (;
+        symhc = masked_mean(0.8 * symh[j] - 13 * sqrt(pdyn[j]) for j in (i - 3):(i + 3)),
+        xind = masked_mean(newell_n(j) for j in trailing),
+        byimf = masked_mean(view(by, trailing)),
+    )
 end
 
 # T01 (G1, G2) at sample `i` of 5-min series of solar wind speed `v` [km/s] and IMF `by`, `bz` (GSM) [nT].
