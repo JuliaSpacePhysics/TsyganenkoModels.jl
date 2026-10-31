@@ -28,7 +28,7 @@ function t01_extall(pdyn, dst, byimf, bzimf, g1, g2, ps, x, y, z)
             dxshift2 = 0.0,
             d = c.d, deltady = c.deltady, g = c.g,
         )
-        bt1, bt2 = deformed(ps, xx, yy, zz, c.rh0, state)
+        bt1, bt2 = deformed((x, y, z) -> unwarped(x, y, z, state), ps, xx, yy, zz, c.rh0, state.g)
         dlp1 = (pdyn / 2.0)^c.dlp1_exp
         dlp2 = (pdyn / 2.0)^c.dlp2_exp
         B_tail = _tail_amp(c.tamp1, dlp1, g1, dst) .* bt1 .+ _tail_amp(c.tamp2, dlp2, g1, dst) .* bt2

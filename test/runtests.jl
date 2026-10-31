@@ -30,6 +30,16 @@ end
     @test TA16(pdyn = 2.0, symhc = -30.0, xind = 0.8, byimf = 3.0)(r_gsm, ps) ≈ [36.193199414830254, 2.4386939542793806, -19.349898119812217] rtol = 1.0e-8
     @test TA16(pdyn = 6.0, symhc = -120.0, xind = 1.8, byimf = -7.0)((8.0, -3.0, 1.0), 0.4) ≈ GSM(54.775603850148237, -3.0340767211959898, 26.967360173238905) rtol = 1.0e-8
 
+    # TS07D_JULY_2017 compiled with gfortran -fdefault-real-8: its DATA literals are otherwise single precision,
+    # which shifts the Birkeland fields by up to a few percent
+    m = TS07D(joinpath(@__DIR__, "ts07d_2017_001_00_00.par"))
+    @test m.pdyn == 4.44
+    @test m((-5.1, 0.3, 2.8), -0.442603) ≈ [36.305386503246098, 2.0411818208349231, -14.936046180845528] rtol = 1.0e-7
+    @test TS07D(; m.a, pdyn = 2.0)((8.0, -3.0, 1.0), 0.3) ≈ [11.646570903292355, 6.0970244135292981, 16.610903151965648] rtol = 1.0e-7
+    @test TS07D(; m.a, pdyn = 1.0)((-12.0, 6.0, -4.0), 0.0) ≈ [-25.232834948564125, 11.270360797028811, -5.5328247013198490] rtol = 1.0e-7
+    # the tail modes' axis, ρ = 0 (≈ 1e-16 after deformation)
+    @test m((0.0, 0.0, 3.0), 0.0) ≈ m((1.0e-6, 0.0, 3.0), 0.0) rtol = 1.0e-6
+
     @testset "near magnetopause and outside magnetosphere" begin
         # intermediate sigma case (S0 - DSIG < sigma < S0 + DSIG)
         @test t96([-6.5, 13, 13.0], ps, param...) ≈ [10.64621818721388, -0.8896267128450983, 1.9983159012100993]

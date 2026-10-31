@@ -1,4 +1,4 @@
-# T01 Tail Field Functions
+# Tail field of T01, TS04 and TS07D
 
 # Coefficients for unwarped mode 1
 const TAIL_A1 = [
@@ -37,7 +37,9 @@ const TAIL_F = [-71.09346626, -1014.308601, -1272.939359, -3224.935936, -44546.8
 const TAIL_B = [10.90101242, 12.68393898, 13.51791954, 14.86775017, 15.12306404]
 const TAIL_C = [0.7954069972, 0.6716601849, 1.174866319, 2.56524992, 10.0198679]
 
-function deformed(ps, x, y, z, rh0, state)
+# Tail field modes `field(x, y, z)` (a tuple of field vectors), warped in Y-Z (see `warped`), then bent in X-Z by
+# the tilt beyond the hinging distance `rh0`.
+function deformed(field::F, ps, x, y, z, rh0, g, tw = 0.0) where {F}
     rh2, ieps = -5.2, 3
     sps = sin(ps); r2 = x^2 + y^2 + z^2; r = sqrt(r2); zr = z / r
     rh = rh0 + rh2 * zr^2
@@ -53,42 +55,31 @@ function deformed(ps, x, y, z, rh0, state)
     fac1 = dxasdz * dzasdy - dxasdy * dzasdz
     fac2 = dxasdx * dzasdz - dxasdz * dzasdx
     fac3 = dzasdx * dxasdy - dxasdx * dzasdy
-    (bxas1, byas1, bzas1), (bxas2, byas2, bzas2) = warped(ps, xas, y, zas, state)
-    bx1 = bxas1 * dzasdz - bzas1 * dxasdz + byas1 * fac1
-    by1 = byas1 * fac2
-    bz1 = bzas1 * dxasdx - bxas1 * dzasdx + byas1 * fac3
-    bx2 = bxas2 * dzasdz - bzas2 * dxasdz + byas2 * fac1
-    by2 = byas2 * fac2
-    bz2 = bzas2 * dxasdx - bxas2 * dzasdx + byas2 * fac3
-    return (bx1, by1, bz1), (bx2, by2, bz2)
+    return map(warped(field, ps, xas, y, zas, g, tw)) do (bxas, byas, bzas)
+        (bxas * dzasdz - bzas * dxasdz + byas * fac1, byas * fac2, bzas * dxasdx - bxas * dzasdx + byas * fac3)
+    end
 end
 
-function warped(ps, x, y, z, state)
+# Tail field modes `field(x, y, z)` warped in Y-Z by the tilt with amplitude `g` (Tsyganenko et al., 1998) and
+# twisted about X by `tw` per 10 Re, the IMF-induced twist of TS07D.
+function warped(field, ps, x, y, z, g, tw = 0.0)
     xl = 20.0
     sps = sin(ps)
     rho2 = y^2 + z^2
     rho = sqrt(rho2)
-    if y == 0.0 && z == 0.0
-        phi, cphi, sphi = 0.0, 1.0, 0.0
-    else
-        phi = atan(z, y)
-        cphi, sphi = y / rho, z / rho
-    end
+    phi = atan(z, y)
+    cphi, sphi = rho == 0 ? (1.0, 0.0) : (y / rho, z / rho)
     rr4l4 = rho / (rho2^2 + xl^4)
-    f = phi + state.g * rho2 * rr4l4 * cphi * sps
-    dfdphi = 1.0 - state.g * rho2 * rr4l4 * sphi * sps
-    dfdrho = state.g * rr4l4^2 * (3.0 * xl^4 - rho2^2) * cphi * sps
-    dfdx = 0.0
+    f = phi + g * rho2 * rr4l4 * cphi * sps + tw * x / 10
+    dfdphi = 1.0 - g * rho2 * rr4l4 * sphi * sps
+    dfdrho = g * rr4l4^2 * (3.0 * xl^4 - rho2^2) * cphi * sps
+    dfdx = tw / 10
     sf, cf = sincos(f)
-    yas, zas = rho * cf, rho * sf
-    (bx_as1, by_as1, bz_as1), (bx_as2, by_as2, bz_as2) = unwarped(x, yas, zas, state)
-    brho_as = by_as1 * cf + bz_as1 * sf; bphi_as = -by_as1 * sf + bz_as1 * cf
-    brho_s = brho_as * dfdphi; bphi_s = bphi_as - rho * (bx_as1 * dfdx + brho_as * dfdrho)
-    b1 = bx_as1 * dfdphi, brho_s * cphi - bphi_s * sphi, brho_s * sphi + bphi_s * cphi
-    brho_as = by_as2 * cf + bz_as2 * sf; bphi_as = -by_as2 * sf + bz_as2 * cf
-    brho_s = brho_as * dfdphi; bphi_s = bphi_as - rho * (bx_as2 * dfdx + brho_as * dfdrho)
-    b2 = bx_as2 * dfdphi, brho_s * cphi - bphi_s * sphi, brho_s * sphi + bphi_s * cphi
-    return b1, b2
+    return map(field(x, rho * cf, rho * sf)) do (bx_as, by_as, bz_as)
+        brho_as = by_as * cf + bz_as * sf; bphi_as = -by_as * sf + bz_as * cf
+        brho_s = brho_as * dfdphi; bphi_s = bphi_as - rho * (bx_as * dfdx + brho_as * dfdrho)
+        (bx_as * dfdphi, brho_s * cphi - bphi_s * sphi, brho_s * sphi + bphi_s * cphi)
+    end
 end
 
 function unwarped(x, y, z, state)

@@ -190,7 +190,7 @@ end
 
 # 2×9 tilted Cartesian harmonics (see `cartharm`) whose amplitudes are linear in the scale
 # factor `x_sc` and in a tilt function: four coefficients per harmonic.
-function _harmonic_shield(a, ps, x_sc, x, y, z, scale)
+function _harmonic_shield(a, ps, x_sc, x, y, z, scale, yodd = false)
     sps, cps = sincos(ps)
     p, r, q, s = (ntuple(i -> a[72 + 3j + i], 3) for j in 0:3)
     coef(o, fψ) = (i, k) -> begin
@@ -198,10 +198,10 @@ function _harmonic_shield(a, ps, x_sc, x, y, z, scale)
         a[l + 1] + a[l + 2] * x_sc + (a[l + 3] + a[l + 4] * x_sc) * fψ
     end
     b1 = tilted(ps * a[85], x, y, z) do x, y, z
-        cartharm(coef(0, cps), p, r, x, y, z, false)
+        cartharm(coef(0, cps), p, r, x, y, z, false, yodd)
     end
     b2 = tilted(ps * a[86], x, y, z) do x, y, z
-        cartharm(coef(36, 2cps), q, s, x, y, z, true)
+        cartharm(coef(36, 2cps), q, s, x, y, z, true, yodd)
     end
     return @. scale * (b1 + sps * b2)
 end

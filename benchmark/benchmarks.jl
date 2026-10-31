@@ -18,6 +18,8 @@ models["T96"] = @benchmarkable T96($param)($r_gsm, $ps)
 models["T01"] = @benchmarkable T01($param)($r_gsm, $ps)
 models["TS04"] = @benchmarkable TS04($param)($r_gsm, $ps)
 models["TA16"] = @benchmarkable TA16(pdyn = 2.0, symhc = -30.0, xind = 0.8, byimf = 2.0)($r_gsm, $ps)
+const ts07d = TS07D(joinpath(pkgdir(TsyganenkoModels), "test", "ts07d_2017_001_00_00.par"))
+models["TS07D"] = @benchmarkable $ts07d($r_gsm, $ps)
 
 # ── Shared field components ────────────────────────────────────────────────────
 components = SUITE["components"] = BenchmarkGroup()
@@ -34,7 +36,7 @@ components["birk_tot"] = @benchmarkable TsyganenkoModels.birk_tot($ps, $x, $y, $
 
 # Tail: deformed current sheet (two modes)
 const tail_state = (; dxshift1 = 4.0, dxshift2 = 0.0, d = 3.0, deltady = 2.0, g = 28.2)
-components["deformed"] = @benchmarkable TsyganenkoModels.deformed($ps, $x, $y, $z, 9.0, $tail_state)
+components["deformed"] = @benchmarkable TsyganenkoModels.deformed((x, y, z) -> TsyganenkoModels.unwarped(x, y, z, $tail_state), $ps, $x, $y, $z, 9.0, $tail_state.g)
 components["tail_shield"] = @benchmarkable TsyganenkoModels.tail_shield(TsyganenkoModels.TAIL_A1, $x, $y, $z, 4.0)
 
 # Dipole shielding
