@@ -101,7 +101,7 @@ end
 
 @testset "Driven models" begin
     using Dates
-    using TsyganenkoModels: fill_gaps!, hourly_mean, t01_g, ts05_w
+    using TsyganenkoModels: fill_gaps!, t01_g, ts05_w
     t = DateTime(2001, 1, 1, 2, 3, 4)
     r = GSM(-5.1, 0.3, 2.8)
     param = (; pdyn = 2.0, dst = -87.0, byimf = 2.0, bzimf = -5.0)
@@ -109,8 +109,6 @@ end
 
     x = [NaN, 1.0, NaN, NaN, 4.0, NaN, NaN, NaN, 8.0, NaN]
     @test isequal(fill_gaps!(x; maxgap = 2), [NaN, 1, 2, 3, 4, NaN, NaN, NaN, 8, NaN])
-
-    @test hourly_mean([100.0; 1:10; NaN; 50.0], 13) == 105 / 11
 
     # Tsyganenko (2002b) §3.1: V = 400 km/s, By = 0, Bz = -5 nT gives G1 ≈ 6, G2 = 10
     n = 4000
@@ -129,6 +127,45 @@ end
     @test all(isnan, w[n - 100])
 end
 
+@testset "OMNI input windows" begin
+    using CDAWeb, Dates
+    using TsyganenkoModels: inputs
+    ext = Base.get_extension(TsyganenkoModels, :TsyganenkoModelsCDAWebExt)
+    day = Date(2001, 1, 1)  # synthetic data, not fetched
+    try
+        k = Float64.((1 - ext.PAD):(ext.PER_DAY + ext.PAD))
+        n = length(k)
+        pdyn = 100 .+ k
+        pdyn[ext.PAD + 2] = NaN
+        ext.HOURLY[(day, "KP")] = fill(30.0, 24)
+        ext.HOURLY[(day, "KP")][2] = NaN
+        ext.HOURLY[(day, "DST")] = collect(1.0:24)
+        t = DateTime(day)
+        @test inputs(Driven(T89), t).iopt === 4
+        @test_throws ArgumentError inputs(Driven(T89), t + Hour(1))
+        @test !haskey(ext.FIVE_MIN, day)
+        ext.FIVE_MIN[day] = ext.OMNIDay(pdyn, 400 .+ k, zeros(n), fill(-5.0, n), k)
+        ext.TS04_W[day] = [(x, x, x, x, x, x) for x in 1.0:ext.PER_DAY]
+        for minutes in (59, 60, 1439)
+            h = minutes ÷ 60 + 1
+            p = inputs(Driven(T96), t + Minute(minutes))
+            @test p.pdyn ≈ (h == 1 ? 100 + 76 / 11 : 100 + 12h - 5.5)
+            @test p.dst == h
+        end
+        for minutes in (0, 1439)
+            sample = minutes ÷ 5 + 1
+            p = inputs(Driven(T01), t + Minute(minutes))
+            @test (p.pdyn, p.dst) == (100 + sample, sample)
+            @test p.g2 ≈ 0.025 * (400 + sample - 5.5)
+            @test inputs(Driven(TS04), t + Minute(minutes)).w6 == sample
+        end
+        @test_throws ArgumentError inputs(Driven(T01), t + Minute(5))
+    finally
+        foreach(c -> delete!(c, day), (ext.FIVE_MIN, ext.TS04_W))
+        foreach(name -> delete!(ext.HOURLY, (day, name)), ("KP", "DST"))
+    end
+end
+
 @testset "OMNI-driven models" begin
     using CDAWeb, Dates
     using TsyganenkoModels: inputs
@@ -139,5 +176,6 @@ end
         m = Driven(M)
         @test m(r, t) == M(inputs(m, t))(r, dipole_tilt(t))
     end
-    @test_throws ArgumentError inputs(Driven(T96), DateTime(1960))
+    quiet(f) = Base.CoreLogging.with_logger(f, Base.CoreLogging.NullLogger())
+    @test_throws ArgumentError quiet(() -> inputs(Driven(T96), DateTime(1960)))
 end

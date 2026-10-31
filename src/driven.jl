@@ -49,12 +49,11 @@ function fill_gaps!(x; maxgap = 35)
     end
 end
 
-# Mean of the valid samples among the 12 5-min samples ending at sample `i`, NaN if none
-function hourly_mean(x, i)
+function masked_mean(itr)
     s, n = 0.0, 0
-    for j in (i - 11):i
-        isnan(x[j]) && continue
-        s += x[j]
+    for x in itr
+        isnan(x) && continue
+        s += x
         n += 1
     end
     return s / n
