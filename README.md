@@ -23,6 +23,7 @@ B_t89 = model_t89(𝐫, ps)
 B_t96 = T96(param)(𝐫, ps)
 B_t01 = T01(param)(𝐫, ps)
 B_ts04 = TS04(param)(𝐫, ps)
+B_ta16 = TA16(pdyn=2.0, symhc=-30.0, xind=0.8, byimf=2.0)(𝐫, ps)  # symhc: corrected SYM-H, xind: Newell coupling index
 
 # Using `TsyIGRF` to combine IGRF14 model and Tsyganenko model, default TsyIGRF() == TsyIGRF(T89(iopt=3))
 TsyIGRF()(𝐫, t)
@@ -47,8 +48,8 @@ Driven(T96, t -> (; pdyn = 2.0, dst = -10.0, byimf = 0.0, bzimf = -2.0))  # any 
   - [x] T96: Effects of the solar wind conditions on the global magnetospheric configuration
   - [x] T01/T02: A model of the near magnetosphere with a dawn-dusk asymmetry
   - [x] TS05/TS04: a dynamical empirical model of the inner storm-time magnetosphere
+  - [x] TA16: An empirical radial basis function (RBF) model of the magnetosphere parameterized by interplanetary and ground-based drivers
   - [ ] TA15 model: A forecasting model of the magnetosphere driven by optimal solar-wind coupling functions
-  - [ ] TA16 model: An empirical RBF model of the magnetosphere parameterized by interplanetary and ground-based drivers
 - Plasma model
   - [ ] Tsyganenko and Mukai (2003): a simple analytical model of the central plasma sheet ion parameters (10 − 50 RE), based on Geotail data.
 

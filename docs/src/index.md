@@ -16,6 +16,7 @@ Modeling of Earth's Magnetosphere Using Spacecraft Magnetometer Data.
   - [x] T96: Effects of the solar wind conditions on the global magnetospheric configuration
   - [x] T01/T02: A model of the near magnetosphere with a dawn-dusk asymmetry
   - [x] TS05/TS04: a dynamical empirical model of the inner storm-time magnetosphere
+  - [x] TA16: An empirical RBF model of the magnetosphere parameterized by interplanetary and ground-based drivers
 
 !!! note "IRBEM.jl"
     [`IRBEM.jl`](https://github.com/JuliaSpacePhysics/IRBEM.jl) is a Julia wrapper for the IRBEM Fortran library that exposes magnetic field computation via `GET_FIELD_MULTI` and supports more Tsyganenko models, but may be outdated and slower than the native Julia implementations.

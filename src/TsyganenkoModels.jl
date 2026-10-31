@@ -1,11 +1,12 @@
 module TsyganenkoModels
 
 using Dates: AbstractTime
+using LinearAlgebra: ×, ⋅
 using GeoCotrans
-using GeoCotrans: ExternalFieldModel, CompositeFieldModel, GSM, Cartesian3, dipole_tilt
+using GeoCotrans: ExternalFieldModel, CompositeFieldModel, GSM, GSW, Cartesian3, SVector, dipole_tilt
 import GeoCotrans: evalmodel, getcsys, evaluate_model
 export t89, t96, t01, ts04, dipole_tilt
-export T89, T96, T01, TS04, TsyIGRF, IGRF
+export T89, T96, T01, TS04, TA16, TsyIGRF, IGRF
 export Driven
 
 export getcsys, GSM, GEO
@@ -21,6 +22,7 @@ include("t89.jl")
 include("t96.jl")
 include("t01.jl")
 include("ts04.jl")
+include("ta16.jl")
 include("composition.jl")
 include("driven.jl")
 
@@ -32,14 +34,10 @@ for f in (:t89, :t96, :t01, :ts04)
     end
 end
 
-evalmodel(m::TsyganenkoModel, x, y, z, t::AbstractTime) = evalmodel(m, x, y, z, dipole_tilt(t))
+evalmodel(m::TsyganenkoModel, x, y, z, t::AbstractTime) = evalmodel(m, x, y, z, dipole_tilt(t, getcsys(m)[1]))
 
-for T in (:T89, :T96, :T01, :TS04)
-    # support namedtuple input
+for T in (:T89, :T96, :T01, :TS04, :TA16)
     @eval $T(nt::NamedTuple) = $T(; nt...)
-end
-
-for T in (:T89, :T96, :T01, :TS04)
     @eval (m::$T)(r::Union{Tuple, AbstractVector}, ps::Real; kw...) = begin
         @assert length(r) == 3
         evalmodel(m, r[1], r[2], r[3], ps; kw...)
