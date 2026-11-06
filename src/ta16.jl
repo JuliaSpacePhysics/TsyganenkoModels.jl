@@ -39,7 +39,7 @@ end
 TA16(; pdyn, symhc, xind, byimf, vgse = nothing) =
     TA16(promote(pdyn, symhc, xind, byimf)..., isnothing(vgse) ? GSM() : GSW(vgse))
 
-getcsys(m::TA16) = (m.frame, Cartesian3())
+native_csys(m::TA16) = (m.frame, Cartesian3())
 
 const TA16_N = 1296
 const TA16_D² = 16.0  # squared RBF smoothing scale [Re²]

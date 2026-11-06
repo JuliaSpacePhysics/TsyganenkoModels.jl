@@ -3,8 +3,8 @@ struct TsyIGRF{T, N} <: CompositeFieldModel
     name::N
 end
 
-getcsys(::TsyIGRF) = (GSM(), Cartesian3())
-GeoCotrans.freeze(m::TsyIGRF, t) = TsyIGRF(map(x -> GeoCotrans.at(x, t, getcsys(m)[1]), m.models), m.name)
+native_csys(::TsyIGRF) = (GSM(), Cartesian3())
+GeoCotrans.freeze(m::TsyIGRF, t) = TsyIGRF(map(x -> GeoCotrans.at(x, t, native_csys(m)[1]), m.models), m.name)
 
 """
     TsyIGRF(model = T89(iopt=3); name=nothing)
@@ -25,7 +25,7 @@ end
 
 function evaluate_model(m::TsyIGRF, pos, t, in, csys, out; kw...)
     return mapreduce(+, m.models) do model
-        model_csys = getcsys(model)
+        model_csys = native_csys(model)
         evaluate_model(model, pos, t, in, model_csys, out; kw...)
     end
 end

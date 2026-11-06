@@ -9,7 +9,7 @@ end
 
 Driven(M::Type{<:TsyganenkoModel}, source = OMNI()) = Driven{M, typeof(source)}(source)
 
-getcsys(::Driven) = (GSM(), Cartesian3())
+native_csys(::Driven) = (GSM(), Cartesian3())
 GeoCotrans.freeze(m::Driven{M}, t) where {M} = GeoCotrans.freeze(M(inputs(m, t)), t)
 
 inputs(m::Driven{M}, t) where {M} = inputs(m.source, M, t)
@@ -18,7 +18,7 @@ inputs(f, ::Type, t) = f(t)
 # The model's frame may depend on its inputs at `t` (TA16's GSW)
 function evaluate_model(m::Driven, pos, t, from, ::Any, to; kw...)
     model = GeoCotrans.freeze(m, t)
-    return evaluate_model(model, pos, t, from, getcsys(model), to; kw...)
+    return evaluate_model(model, pos, t, from, native_csys(model), to; kw...)
 end
 
 """

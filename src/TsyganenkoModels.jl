@@ -4,7 +4,7 @@ using Dates: AbstractTime
 using LinearAlgebra: ×, ⋅
 using GeoCotrans
 using GeoCotrans: ExternalFieldModel, CompositeFieldModel, GSM, GSW, Cartesian3, SVector, dipole_tilt
-import GeoCotrans: evalmodel, getcsys, evaluate_model
+import GeoCotrans: evalmodel, getcsys, native_csys, evaluate_model
 export t89, t96, t01, ts04, dipole_tilt
 export T89, T96, T01, TS04, TA16, TsyIGRF, IGRF
 export Driven
@@ -25,6 +25,8 @@ include("ts04.jl")
 include("ta16.jl")
 include("composition.jl")
 include("driven.jl")
+
+Base.@deprecate getcsys(m::Union{TsyganenkoModel, TsyIGRF, Driven}) GeoCotrans.native_csys(m)
 
 for f in (:t89, :t96, :t01, :ts04)
     @eval $f(x, y, z, t::AbstractTime, args...; kw...) = $f(x, y, z, dipole_tilt(t), args...; kw...)

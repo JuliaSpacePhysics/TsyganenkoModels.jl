@@ -5,15 +5,15 @@ Compute GSM components of the external magnetic field [nT] using Tsyganenko mode
 """
 abstract type TsyganenkoModel <: ExternalFieldModel end
 
-getcsys(::TsyganenkoModel) = (GSM(), Cartesian3())
+native_csys(::TsyganenkoModel) = (GSM(), Cartesian3())
 
 # `model` at the dipole tilt `ps` of a fixed time
 struct Tilted{M, T} <: ExternalFieldModel
     model::M
     ps::T
 end
-GeoCotrans.freeze(m::TsyganenkoModel, t) = Tilted(m, dipole_tilt(t, getcsys(m)[1]))
-getcsys(m::Tilted) = getcsys(m.model)
+GeoCotrans.freeze(m::TsyganenkoModel, t) = Tilted(m, dipole_tilt(t, native_csys(m)[1]))
+native_csys(m::Tilted) = native_csys(m.model)
 evalmodel(m::Tilted, x, y, z, _; kw...) = evalmodel(m.model, x, y, z, m.ps; kw...)
 
 # Generic model types
