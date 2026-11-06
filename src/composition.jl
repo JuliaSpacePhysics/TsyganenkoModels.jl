@@ -4,6 +4,7 @@ struct TsyIGRF{T, N} <: CompositeFieldModel
 end
 
 getcsys(::TsyIGRF) = (GSM(), Cartesian3())
+GeoCotrans.freeze(m::TsyIGRF, t) = TsyIGRF(map(x -> GeoCotrans.at(x, t, getcsys(m)[1]), m.models), m.name)
 
 """
     TsyIGRF(model = T89(iopt=3); name=nothing)

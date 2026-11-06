@@ -41,12 +41,19 @@ end
 
 @testset "Composite magnetic fields" begin
     using Dates
+    using GeoCotrans: at
     time = DateTime(2001, 1, 1, 2, 3, 4)
     r_gsm = GSM(-5.1, 0.3, 2.8)
     model = TsyIGRF()
     B_true = [289.34552144342604, -20.162245780356457, -68.44100172746695]
     @test IGRF()(r_gsm, time) + T89(iopt = 3)(r_gsm, time) ≈ B_true
     @test model(r_gsm, time) ≈ B_true
+    calls = Ref(0)
+    source = _ -> (calls[] += 1; (; iopt = 3))
+    bound = at(TsyIGRF(Driven(T89, source)), time)
+    @test bound(r_gsm) ≈ model(r_gsm, time)
+    @test bound(GSM(-4.0, 0.5, 1.0)) ≈ model(GSM(-4.0, 0.5, 1.0), time)
+    @test calls[] == 1
 
     @info @b TsyIGRF()($r_gsm, $time), IGRF()($r_gsm, $time) + T89(iopt = 3)($r_gsm, $time)
 end
