@@ -14,7 +14,7 @@ struct Tilted{M, T} <: ExternalFieldModel
 end
 GeoCotrans.freeze(m::TsyganenkoModel, t) = Tilted(m, dipole_tilt(t, native_csys(m)[1]))
 native_csys(m::Tilted) = native_csys(m.model)
-evalmodel(m::Tilted, x, y, z, _; kw...) = evalmodel(m.model, x, y, z, m.ps; kw...)
+evalmodel(m::Tilted, x, y, z, ::Any; kw...) = evalmodel(m.model, x, y, z, m.ps; kw...)
 
 # Generic model types
 """
