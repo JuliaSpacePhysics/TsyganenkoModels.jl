@@ -14,7 +14,7 @@ function birk_tot(ps, x, y, z, xkappa1, xkappa2)
     return (f11 .+ h11), (f12 .+ h12), (f21 .+ h21), (f22 .+ h22)
 end
 
-function birk_1n2(numb, mode, ps, x, y, z, xkappa)
+function birk_1n2(numb, mode, ps, x, y, z, xkappa, cones = twocones)
     # Select coefficient array based on region and mode
     a = numb == 1 ? (mode == 1 ? A11 : A12) : (mode == 1 ? A21 : A22)
 
@@ -47,7 +47,7 @@ function birk_1n2(numb, mode, ps, x, y, z, xkappa)
     zs = -rho * sphics
 
     # Call twocones with deformed coordinates
-    bxs, byas, bzs = twocones(a, xs, ysc, zs, mode, dtheta)
+    bxs, byas, bzs = cones(a, xs, ysc, zs, mode, dtheta)
 
     # Transform back
     brhoas = bxs * cphics - bzs * sphics
@@ -68,6 +68,13 @@ function twocones(a, x, y, z, mode, dtheta)
     bxn, byn, bzn = one_cone(a, x, y, z, mode, dtheta)
     bxs, bys, bzs = one_cone(a, x, -y, -z, mode, dtheta)
     return bxn - bxs, byn + bys, bzn + bzs
+end
+
+# `twocones` rotated about z by 90° (mode 1) or 45° (mode 2): field-aligned currents even in y (TS07D)
+function twoconss(a, x, y, z, mode, dtheta)
+    s, c = mode == 1 ? (1.0, 0.0) : (sqrt(0.5), sqrt(0.5))
+    bx, by, bz = twocones(a, x * c + y * s, y * c - x * s, z, mode, dtheta)
+    return bx * c - by * s, bx * s + by * c, bz
 end
 
 function one_cone(a, x, y, z, mode, dtheta)

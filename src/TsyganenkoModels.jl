@@ -6,7 +6,7 @@ using GeoCotrans
 using GeoCotrans: ExternalFieldModel, CompositeFieldModel, GSM, GSW, Cartesian3, SVector, dipole_tilt
 import GeoCotrans: evalmodel, getcsys, native_csys, evaluate_model
 export t89, t96, t01, ts04, dipole_tilt
-export T89, T96, T01, TS04, TA16, TsyIGRF, IGRF
+export T89, T96, T01, TS04, TA16, TS07D, TsyIGRF, IGRF
 export Driven
 
 export getcsys, GSM, GEO
@@ -23,6 +23,7 @@ include("t96.jl")
 include("t01.jl")
 include("ts04.jl")
 include("ta16.jl")
+include("ts07d.jl")
 include("composition.jl")
 include("driven.jl")
 
@@ -38,7 +39,7 @@ end
 
 evalmodel(m::TsyganenkoModel, x, y, z, t::AbstractTime) = evalmodel(GeoCotrans.freeze(m, t), x, y, z, t)
 
-for T in (:T89, :T96, :T01, :TS04, :TA16)
+for T in (:T89, :T96, :T01, :TS04, :TA16, :TS07D)
     @eval $T(nt::NamedTuple) = $T(; nt...)
     @eval (m::$T)(r::Union{Tuple, AbstractVector}, ps::Real; kw...) = begin
         @assert length(r) == 3

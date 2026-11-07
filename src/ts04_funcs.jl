@@ -34,7 +34,7 @@ function ts04_extall(pdyn, dst, byimf, bzimf, w1, w2, w3, w4, w5, w6, ps, x, y, 
             deltady = c.deltady,
             g = c.g,
         )
-        bt1, bt2 = deformed(ps, xx, yy, zz, c.rh0, state)
+        bt1, bt2 = deformed((x, y, z) -> unwarped(x, y, z, state), ps, xx, yy, zz, c.rh0, state.g)
         dlp1 = (pdyn / 2.0)^c.dlp1_exp
         dlp2 = (pdyn / 2.0)^c.dlp2_exp
         B_tail = _tamp(c.tamp1, dlp1, w1, ws[1]) .* bt1 .+ _tamp(c.tamp2, dlp2, w2, ws[2]) .* bt2

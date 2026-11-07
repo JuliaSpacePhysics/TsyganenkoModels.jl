@@ -37,28 +37,29 @@ end
 end
 
 """
-    cartharm(c, p, r, x, y, z, parallel) -> (Bx, By, Bz)
+    cartharm(c, p, r, x, y, z, parallel, yodd = false) -> (Bx, By, Bz)
 
 Evaluate the Cartesian-harmonic field `B = Σ c(i,k) ∇Uᵢₖ`, where
-`Uᵢₖ = -exp(x√(1/pᵢ² + 1/rₖ²)) cos(y/pᵢ) f(z/rₖ)`.
+`Uᵢₖ = -exp(x√(1/pᵢ² + 1/rₖ²)) g(y/pᵢ) f(z/rₖ)`.
 `p` and `r` are spatial scales along y and z; `parallel` selects `f = cos`
-(Bx even, Bz odd in z), otherwise `f = sin` (Bx odd, Bz even).
+(Bx even, Bz odd in z), otherwise `f = sin` (Bx odd, Bz even); `yodd` selects `g = sin`, otherwise `g = cos`.
 Each potential satisfies Laplace's equation. Fitted coefficients provide magnetopause
 shielding or IMF penetration (Tsyganenko 1995, JGR 100, 5599).
 """
-@inline function cartharm(c, p, r, x, y, z, parallel)
+@inline function cartharm(c, p, r, x, y, z, parallel, yodd = false)
     syp = map(pᵢ -> sincos(y / pᵢ), p)
     szr = map(rₖ -> sincos(z / rₖ), r)
     bx = by = bz = 0.0
     for i in eachindex(p), k in eachindex(r)
         sy, cy = syp[i]
         sz, cz = szr[k]
+        fy, dfy = yodd ? (sy, cy) : (cy, -sy)
         fz, dfz = parallel ? (cz, -sz) : (sz, cz)
         sq = sqrt(1 / p[i]^2 + 1 / r[k]^2)
         e = c(i, k) * exp(x * sq)
-        bx -= sq * e * cy * fz
-        by += e / p[i] * sy * fz
-        bz -= e / r[k] * cy * dfz
+        bx -= sq * e * fy * fz
+        by -= e / p[i] * dfy * fz
+        bz -= e / r[k] * fy * dfz
     end
     return bx, by, bz
 end
